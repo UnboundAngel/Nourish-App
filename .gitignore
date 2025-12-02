@@ -1,0 +1,14 @@
+# Dependencies (Heavy - Do NOT upload)
+node_modules/
+
+# Build Outputs (Generated - Do NOT upload)
+dist/
+release/
+
+# System Junk
+.DS_Store
+Thumbs.db
+*.log
+
+# Environment variables (Secrets)
+.env
