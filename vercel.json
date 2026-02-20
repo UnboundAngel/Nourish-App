@@ -1,0 +1,18 @@
+{
+  "crons": [
+    {
+      "path": "/api/send-reminder?secret=your_cron_secret",
+      "schedule": "0 20 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
