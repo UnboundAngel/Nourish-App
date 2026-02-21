@@ -86,7 +86,6 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
     const [isIntroExiting, setIsIntroExiting] = useState(false);
     const [shapeIndex, setShapeIndex] = useState(0);
     const [liquidFill, setLiquidFill] = useState(0);
-    const [isPaused, setIsPaused] = useState(false);
     
     const shapes = [
         { label: "Hydration", color: "#3b82f6", path: "M64.8,58.2 C64.8,74.1 55.8,80.6 44.6,80.6 S24.4,74.1 24.4,58.2 S44.6,16.6 44.6,16.6 S64.8,42.3 64.8,58.2 z" },
@@ -99,32 +98,18 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
         document.body.style.touchAction = 'none';
         
         if (step === 0) {
-            const fillDuration = 4000;
-            const pauseDuration = 1000;
-            const totalCycleDuration = fillDuration + pauseDuration;
+            const cycleDuration = 4000;
             const idleTimer = setTimeout(() => setShowIdleHint(true), 5000);
             
             const startTime = Date.now();
-            
             const updateFrame = () => {
                 const elapsed = Date.now() - startTime;
-                const cycleTime = elapsed % totalCycleDuration;
+                const totalProgress = (elapsed / cycleDuration);
+                const currentShapeProgress = totalProgress % 1;
                 
-                // Determine current shape index
-                const currentCycle = Math.floor(elapsed / totalCycleDuration);
-                const newIndex = currentCycle % shapes.length;
+                setLiquidFill(currentShapeProgress * 100);
                 
-                if (cycleTime < fillDuration) {
-                    // Filling phase
-                    const fillPercent = (cycleTime / fillDuration) * 100;
-                    setLiquidFill(fillPercent);
-                    setIsPaused(false);
-                } else {
-                    // Pause phase - hold at 100%
-                    setLiquidFill(100);
-                    setIsPaused(true);
-                }
-                
+                const newIndex = Math.floor(totalProgress) % shapes.length;
                 setShapeIndex(newIndex);
                 
                 if (step === 0) requestAnimationFrame(updateFrame);
@@ -232,7 +217,14 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                                     />
                                 </g>
 
-                                {/* The Glass Outline - removed stroke to fix border artifact */}
+                                {/* The Glass Outline */}
+                                <path 
+                                    d={shapes[shapeIndex].path} 
+                                    fill="none" 
+                                    stroke="white" 
+                                    strokeWidth="1"
+                                    className="transition-all duration-[2000ms] ease-in-out opacity-40"
+                                />
                             </svg>
                         </button>
 
