@@ -5,8 +5,7 @@ import {
   signInWithCustomToken,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   GoogleAuthProvider,
   signOut,
   sendPasswordResetEmail
@@ -143,38 +142,25 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
       }
   };
 
-  // Handle Google redirect result on page load
-  useEffect(() => {
-      getRedirectResult(auth).then((result) => {
-          if (result?.user) {
-              const pendingName = localStorage.getItem('nourish-pending-google-name');
-              if (pendingName) {
-                  localStorage.removeItem('nourish-pending-google-name');
-                  const docRef = doc(db, 'artifacts', appId, 'users', result.user.uid, 'profile', 'main');
-                  setDoc(docRef, { 
-                      displayName: pendingName, 
-                      email: result.user.email 
-                  }, { merge: true });
-              }
-          }
-      }).catch((error) => {
-          console.error('Google redirect error:', error);
-      });
-  }, []);
-
   const handleGoogleLogin = async (onboardingName, isQuiet, { handleSaveProfile: saveProfile }) => {
       try {
           const provider = new GoogleAuthProvider();
-          // Store name for after redirect returns
-          if (onboardingName) {
-              localStorage.setItem('nourish-pending-google-name', onboardingName);
+          const userCredential = await signInWithPopup(auth, provider);
+          
+          if (onboardingName && userCredential.user) {
+              await saveProfile(onboardingName, userCredential.user.email, userCredential.user.uid);
           }
-          await signInWithRedirect(auth, provider);
-          // Page will redirect — won't reach here
+
           return true;
       } catch (error) {
-          console.error(error);
-          alert("Google Sign In failed: " + error.message);
+          console.error('Google Sign In error:', error.code, error.message);
+          if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+              alert('The sign-in popup was blocked or closed. Please allow popups for this site and try again.');
+          } else if (error.code === 'auth/cancelled-popup-request') {
+              // User clicked multiple times, ignore
+          } else {
+              alert('Google Sign In failed: ' + error.message);
+          }
           return false;
       }
   };
