@@ -1,10 +1,123 @@
 import React, { useMemo } from 'react';
-import { Plus, Coffee, Sun, Moon, Apple, BarChart3 } from 'lucide-react';
+import { Plus, Coffee, Sun, Moon, Apple, BarChart3, Target, Flame } from 'lucide-react';
+
+export const ProgressRing = ({ current, target, label, unit, color, theme, size = 120 }) => {
+  const percentage = Math.min((current / target) * 100, 100) || 0;
+  const strokeWidth = 10;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative" style={{ width: size, height: size }}>
+        {/* Background Circle */}
+        <svg className="w-full h-full transform -rotate-90">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            className="text-black/5 theme-transition"
+          />
+          {/* Progress Circle */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            strokeDasharray={circumference}
+            style={{ 
+              strokeDashoffset: offset,
+              transition: 'stroke-dashoffset 1s ease-in-out'
+            }}
+            strokeLinecap="round"
+            className={`${color} theme-transition`}
+          />
+        </svg>
+        {/* Center Text */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={`text-xl font-black ${theme.textMain} theme-transition`}>
+            {Math.round(current)}
+          </span>
+          <span className="text-[10px] font-bold opacity-40 uppercase">
+            {unit}
+          </span>
+        </div>
+      </div>
+      <div className="text-center">
+        <span className={`text-xs font-bold ${theme.textMain} opacity-60 theme-transition`}>
+          {label}
+        </span>
+        <span className="text-[10px] block opacity-40 font-medium">
+          Target: {target}{unit}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+export const DailyTargets = ({ totals, targets, theme, onEdit }) => {
+  return (
+    <Widget 
+      title="Daily Progress" 
+      icon={Target} 
+      theme={theme}
+      action={
+        <button 
+          onClick={onEdit}
+          className={`text-[10px] font-bold px-3 py-1 rounded-full shadow-sm hover:${theme.inputBg} hover:scale-105 active:scale-95 transition-all theme-transition clickable`}
+        >
+          Adjust Goals
+        </button>
+      }
+    >
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 py-2">
+        <ProgressRing 
+          current={totals.calories} 
+          target={targets.calories} 
+          label="Calories" 
+          unit="kcal" 
+          color={theme.primaryText.replace('text-', 'stroke-')} 
+          theme={theme}
+        />
+        <ProgressRing 
+          current={totals.protein} 
+          target={targets.protein} 
+          label="Protein" 
+          unit="g" 
+          color="stroke-green-500" 
+          theme={theme}
+        />
+        <ProgressRing 
+          current={totals.carbs} 
+          target={targets.carbs} 
+          label="Carbs" 
+          unit="g" 
+          color="stroke-orange-500" 
+          theme={theme}
+        />
+        <ProgressRing 
+          current={totals.fats} 
+          target={targets.fats} 
+          label="Fats" 
+          unit="g" 
+          color="stroke-blue-500" 
+          theme={theme}
+        />
+      </div>
+    </Widget>
+  );
+};
 
 export const Widget = ({ children, className = "", title, icon: Icon, action, subtitle, theme }) => (
-  <div className={`${theme.card} rounded-3xl shadow-sm border ${theme.border} overflow-hidden transition-all hover:shadow-md ${className} ${theme.textMain} theme-transition`}>
+  <div className={`${theme.card} rounded-3xl shadow-sm overflow-hidden transition-all hover:shadow-md ${className} ${theme.textMain} theme-transition`}>
     {(title || action) && (
-      <div className={`px-5 py-4 border-b ${theme.border} flex justify-between items-center theme-transition`}>
+      <div className={`px-5 py-4 shadow-sm flex justify-between items-center theme-transition`}>
         <div className="flex flex-col">
             <div className="flex items-center gap-2">
             {Icon && <Icon size={18} className={theme.accent.replace('text-', 'text-')} />}
@@ -102,7 +215,7 @@ export const WellnessTrends = ({ entries, theme }) => {
           
           return (
             <div key={cat} className="flex-1 flex flex-col items-center gap-2 group relative h-full justify-end">
-               <div className={`relative w-full flex items-end justify-center rounded-xl overflow-hidden border ${theme.border} ${theme.inputBg} shadow-inner theme-transition`} style={{ height: '100%' }}>
+               <div className={`relative w-full flex items-end justify-center rounded-xl overflow-hidden ${theme.inputBg} shadow-inner theme-transition`} style={{ height: '100%' }}>
                   <div className="absolute bottom-0 w-full bg-transparent flex items-end justify-center h-full">
                       <div 
                         className={`w-full ${theme.secondary.replace('bg-', 'bg-')} absolute bottom-0 transition-all duration-700 ease-out rounded-t-sm opacity-50`}

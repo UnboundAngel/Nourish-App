@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vercel config with secrets (use vercel.json.example as template)
+vercel.json

@@ -1,0 +1,366 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  CloudSun, 
+  ChevronRight, 
+  CheckCircle2, 
+  Calendar,
+  Trophy,
+  Info,
+  FastForward,
+  Wrench,
+  RotateCcw
+} from 'lucide-react';
+
+// --- Custom SVG Plants for Organic Growth ---
+const Seedling = () => (
+  <svg viewBox="0 0 100 100" className="w-8 h-8 md:w-10 md:h-10 overflow-visible drop-shadow-md transition-transform hover:scale-125">
+    <ellipse cx="50" cy="90" rx="25" ry="8" fill="#452B11" opacity="0.4" />
+    <path d="M50 90 Q40 60 20 50 Q45 50 50 80" fill="#84CC16" />
+    <path d="M50 90 Q60 50 80 40 Q55 40 50 70" fill="#65A30D" />
+  </svg>
+);
+
+const Bush = () => (
+  <svg viewBox="0 0 100 100" className="w-12 h-12 md:w-14 md:h-14 overflow-visible drop-shadow-md transition-transform hover:scale-110">
+    <ellipse cx="50" cy="90" rx="30" ry="10" fill="#452B11" opacity="0.4" />
+    <circle cx="50" cy="60" r="28" fill="#22C55E" />
+    <circle cx="30" cy="65" r="20" fill="#16A34A" />
+    <circle cx="70" cy="65" r="20" fill="#15803D" />
+  </svg>
+);
+
+const Flower = () => (
+  <svg viewBox="0 0 100 100" className="w-12 h-12 md:w-16 md:h-16 overflow-visible drop-shadow-lg transition-transform hover:scale-110">
+    <ellipse cx="50" cy="90" rx="25" ry="8" fill="#452B11" opacity="0.4" />
+    <rect x="47" y="40" width="6" height="50" fill="#16A34A" />
+    <path d="M47 70 Q30 60 20 75 Q35 80 47 75" fill="#15803D" />
+    <path d="M53 60 Q70 50 80 65 Q65 70 53 65" fill="#15803D" />
+    <circle cx="50" cy="20" r="14" fill="#F472B6" />
+    <circle cx="28" cy="35" r="14" fill="#F472B6" />
+    <circle cx="72" cy="35" r="14" fill="#F472B6" />
+    <circle cx="40" cy="55" r="14" fill="#F472B6" />
+    <circle cx="60" cy="55" r="14" fill="#F472B6" />
+    <circle cx="50" cy="40" r="10" fill="#FACC15" />
+  </svg>
+);
+
+const PineTree = () => (
+  <svg viewBox="0 0 100 100" className="w-20 h-20 md:w-28 md:h-28 overflow-visible -translate-y-4 drop-shadow-xl transition-transform hover:scale-105">
+    <ellipse cx="50" cy="95" rx="30" ry="10" fill="#452B11" opacity="0.4" />
+    <rect x="42" y="50" width="16" height="45" fill="#78350F" />
+    <circle cx="50" cy="35" r="35" fill="#059669" />
+    <circle cx="25" cy="50" r="25" fill="#047857" />
+    <circle cx="75" cy="50" r="25" fill="#065F46" />
+    <circle cx="50" cy="20" r="20" fill="#34D399" opacity="0.3" />
+  </svg>
+);
+
+const AppleTree = () => (
+  <svg viewBox="0 0 100 100" className="w-24 h-24 md:w-36 md:h-36 overflow-visible -translate-y-8 drop-shadow-2xl transition-transform hover:scale-105">
+    <ellipse cx="50" cy="95" rx="35" ry="12" fill="#452B11" opacity="0.4" />
+    <path d="M40 95 C40 60 45 40 35 20 L65 20 C55 40 60 60 60 95 Z" fill="#78350F" />
+    <circle cx="50" cy="30" r="40" fill="#065F46" />
+    <circle cx="20" cy="45" r="30" fill="#047857" />
+    <circle cx="80" cy="45" r="30" fill="#064E3B" />
+    <circle cx="50" cy="15" r="6" fill="#EF4444" />
+    <circle cx="25" cy="35" r="6" fill="#EF4444" />
+    <circle cx="75" cy="40" r="6" fill="#EF4444" />
+    <circle cx="40" cy="50" r="6" fill="#EF4444" />
+    <circle cx="60" cy="30" r="6" fill="#EF4444" />
+    <circle cx="35" cy="60" r="6" fill="#EF4444" />
+    <circle cx="65" cy="55" r="6" fill="#EF4444" />
+  </svg>
+);
+
+// Pre-calculated organic positions for up to 60 plants using rejection sampling
+// (keeps them inside the oval island boundary)
+const PLANT_POSITIONS = [
+  {x: 50, y: 50}, {x: 35, y: 65}, {x: 65, y: 60}, {x: 45, y: 35}, {x: 55, y: 75},
+  {x: 25, y: 50}, {x: 75, y: 45}, {x: 40, y: 80}, {x: 60, y: 30}, {x: 30, y: 35},
+  {x: 70, y: 75}, {x: 20, y: 65}, {x: 80, y: 60}, {x: 50, y: 20}, {x: 50, y: 85},
+  {x: 35, y: 25}, {x: 65, y: 25}, {x: 25, y: 75}, {x: 75, y: 70}, {x: 40, y: 50},
+  {x: 60, y: 50}, {x: 15, y: 55}, {x: 85, y: 50}, {x: 45, y: 65}, {x: 55, y: 45},
+  {x: 30, y: 80}, {x: 70, y: 30}, {x: 45, y: 15}, {x: 55, y: 85}, {x: 10, y: 45},
+  {x: 90, y: 55}, {x: 35, y: 55}, {x: 65, y: 40}, {x: 25, y: 35}, {x: 75, y: 25},
+  {x: 40, y: 20}, {x: 60, y: 70}, {x: 20, y: 40}, {x: 80, y: 35}, {x: 50, y: 10},
+  {x: 50, y: 95}, {x: 30, y: 50}, {x: 70, y: 50}, {x: 15, y: 65}, {x: 85, y: 65},
+  {x: 45, y: 80}, {x: 55, y: 25}, {x: 35, y: 40}, {x: 65, y: 80}, {x: 25, y: 60},
+  {x: 75, y: 60}, {x: 40, y: 30}, {x: 60, y: 85}, {x: 20, y: 75}, {x: 80, y: 25},
+  {x: 45, y: 50}, {x: 55, y: 60}, {x: 30, y: 20}, {x: 70, y: 85}, {x: 10, y: 60}
+];
+
+const App = () => {
+  // --- State ---
+  const [streak, setStreak] = useState(0);
+  const [history, setHistory] = useState([]);
+  const [showEvolutionModal, setShowEvolutionModal] = useState(false);
+  
+  // App Time state allows us to simulate future days
+  const [currentAppDate, setCurrentAppDate] = useState(new Date());
+  const [lastActionDateString, setLastActionDateString] = useState(null);
+
+  // --- Garden Config ---
+  const STAGES = [
+    { threshold: 0, label: "Bare Patch", color: "text-amber-700", desc: "Plant your first seed!" },
+    { threshold: 3, label: "Sprouting Garden", color: "text-lime-600", desc: "Life is taking root." },
+    { threshold: 7, label: "Blooming Meadow", color: "text-pink-500", desc: "Your consistency is blossoming." },
+    { threshold: 14, label: "Growing Grove", color: "text-emerald-600", desc: "A sturdy foundation built on habits." },
+    { threshold: 30, label: "Abundant Orchard", color: "text-red-500", desc: "An impressive ecosystem of health!" },
+  ];
+
+  const currentStage = useMemo(() => {
+    return [...STAGES].reverse().find(s => streak >= s.threshold) || STAGES[0];
+  }, [streak]);
+
+  // --- Plant Rendering Logic ---
+  const visiblePlants = useMemo(() => {
+    const plants = [];
+    const maxPlants = Math.min(streak, 60); // Cap at 60 items so it doesn't get infinitely cluttered
+    
+    for (let i = 0; i < maxPlants; i++) {
+      const age = streak - i; // Older plants have a higher age
+      let PlantComponent = Seedling;
+      
+      // Upgrade logic based on the plant's individual age
+      if (age >= 30) PlantComponent = AppleTree;
+      else if (age >= 14) PlantComponent = PineTree;
+      else if (age >= 7) PlantComponent = Flower;
+      else if (age >= 3) PlantComponent = Bush;
+
+      plants.push({
+        id: i,
+        age,
+        pos: PLANT_POSITIONS[i % PLANT_POSITIONS.length],
+        Component: PlantComponent,
+        isNew: age === 1
+      });
+    }
+
+    // CRITICAL: Sort by Y position (painter's algorithm) so plants lower on the screen overlap plants higher up
+    return plants.sort((a, b) => a.pos.y - b.pos.y);
+  }, [streak]);
+
+  // --- Handlers ---
+  const handleLogMeal = (simulatedDaysToAdd = 0) => {
+    let dateToLog = new Date(currentAppDate);
+    
+    if (simulatedDaysToAdd > 0) {
+      // Dev mode: fast forward time
+      dateToLog.setDate(dateToLog.getDate() + simulatedDaysToAdd);
+      setCurrentAppDate(dateToLog);
+    } else {
+      // Real mode: ensure they haven't logged today
+      if (lastActionDateString === currentAppDate.toLocaleDateString()) return;
+    }
+
+    const dateStr = dateToLog.toLocaleDateString();
+    const newStreak = streak + 1;
+    
+    setStreak(newStreak);
+    setLastActionDateString(dateStr);
+    
+    // Add to history
+    setHistory(prev => [
+      { date: dateStr, action: "Planned Daily Meals" }, 
+      ...prev
+    ].slice(0, 5));
+
+    // Check for "Evolution" Modal based on total streak
+    if (STAGES.some(s => s.threshold === newStreak && newStreak > 0)) {
+      setShowEvolutionModal(true);
+    }
+  };
+
+  const resetProgress = () => {
+    if (confirm("Reset everything? The garden will be cleared.")) {
+      setStreak(0);
+      setHistory([]);
+      setCurrentAppDate(new Date());
+      setLastActionDateString(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FDFCF0] text-slate-800 font-sans p-4 md:p-8 flex flex-col items-center overflow-x-hidden">
+      
+      {/* --- Inline Styles for custom float animation --- */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        @keyframes pop-in {
+          0% { transform: scale(0); opacity: 0; }
+          70% { transform: scale(1.2); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-pop { animation: pop-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+      `}</style>
+
+      {/* Header */}
+      <header className="max-w-4xl w-full flex flex-col md:flex-row justify-between items-center md:items-start gap-4 mb-8">
+        <div className="text-center md:text-left">
+          <h1 className="text-3xl font-black tracking-tight text-[#4a6b22] flex items-center justify-center md:justify-start gap-2">
+            <CloudSun className="text-amber-400" size={32} /> Meal Garden
+          </h1>
+          <p className="text-slate-500 font-medium mt-1">
+            Status: <span className={`font-bold ${currentStage.color}`}>{currentStage.label}</span>
+          </p>
+        </div>
+        
+        <div className="bg-white px-6 py-3 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Current Streak</p>
+            <p className="text-3xl font-black text-[#5a7a2d] leading-none">{streak}</p>
+          </div>
+          <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-[#5a7a2d]">
+            <CheckCircle2 size={28} />
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* --- 3D ORGANIC GARDEN ISLAND --- */}
+        <div className="lg:col-span-2 flex items-center justify-center min-h-[400px] relative">
+          
+          <div className="relative w-full max-w-2xl aspect-[3/2] mx-auto animate-float">
+            {/* Island Base Shadow & Crust */}
+            <div className="absolute inset-0 bg-[#8cb04e] rounded-[50%] shadow-[0_min(4vw,30px)_0_0_#5a7a2d,0_min(6vw,50px)_min(4vw,30px)_rgba(0,0,0,0.25)] border-4 border-[#a6cf5c]"></div>
+            
+            {/* Inner texture (light grass variations) */}
+            <div className="absolute inset-[5%] rounded-[50%] border border-[#a6cf5c]/30"></div>
+            <div className="absolute inset-[15%] rounded-[50%] border border-[#a6cf5c]/20"></div>
+
+            {/* Plants Container */}
+            <div className="absolute inset-[10%]">
+              {streak === 0 && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-[#5a7a2d]/60 font-medium">
+                  <p>A fresh patch of soil.</p>
+                  <p className="text-sm">Log a meal to plant a seed!</p>
+                </div>
+              )}
+
+              {visiblePlants.map((plant) => (
+                <div 
+                  key={`plant-${plant.id}`}
+                  className={`absolute flex items-end justify-center -translate-x-1/2 -translate-y-[80%] ${plant.isNew ? 'animate-pop' : ''}`}
+                  style={{
+                    left: `${plant.pos.x}%`,
+                    top: `${plant.pos.y}%`,
+                    zIndex: Math.floor(plant.pos.y) // Ensures overlapping correctness
+                  }}
+                >
+                  <plant.Component />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Controls & Stats */}
+        <div className="flex flex-col gap-4">
+          
+          {/* Main Action Button */}
+          <button 
+            onClick={() => handleLogMeal(0)}
+            disabled={lastActionDateString === currentAppDate.toLocaleDateString()}
+            className="group w-full bg-[#8cb04e] hover:bg-[#7a9b42] disabled:bg-slate-200 disabled:cursor-not-allowed disabled:border-slate-300 text-white p-6 rounded-[2rem] shadow-lg shadow-[#8cb04e]/30 transition-all active:scale-95 flex flex-col items-center justify-center gap-2 border-b-4 border-[#5a7a2d]"
+          >
+            <Calendar className="w-8 h-8 group-hover:rotate-12 transition-transform" />
+            <span className="font-bold text-xl">Log Today's Meal</span>
+            {lastActionDateString === currentAppDate.toLocaleDateString() ? (
+              <span className="text-[11px] opacity-80 uppercase tracking-wider font-bold">Come back tomorrow!</span>
+            ) : (
+              <span className="text-[11px] opacity-80 uppercase tracking-wider font-bold">Plant a new seed</span>
+            )}
+          </button>
+
+          {/* History Panel */}
+          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex-1">
+            <h3 className="text-xs font-black uppercase text-slate-400 mb-5 flex items-center gap-2">
+              <Trophy size={14} /> Garden History
+            </h3>
+            <div className="space-y-4">
+              {history.length === 0 ? (
+                <p className="text-sm text-slate-400 italic">No activity yet. Your journey begins today.</p>
+              ) : (
+                history.map((h, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm font-medium">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#8cb04e]" />
+                    <span className="text-slate-400 w-24">
+                      {h.date === currentAppDate.toLocaleDateString() ? "Today" : h.date}
+                    </span>
+                    <span className="text-slate-700">{h.action}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* --- DEVELOPER TOOLS (For Testing) --- */}
+      <div className="max-w-4xl w-full mt-12 bg-slate-800 text-slate-200 p-6 rounded-3xl border border-slate-700 shadow-xl">
+        <div className="flex items-center gap-2 mb-4 text-amber-400">
+          <Wrench size={18} />
+          <h3 className="text-sm font-bold uppercase tracking-widest">Developer Testing Tools</h3>
+        </div>
+        <p className="text-xs text-slate-400 mb-4">
+          Use these controls to fast-forward time and test the garden's evolution without waiting real days. App Date is currently simulated as: <span className="text-white font-mono bg-slate-900 px-2 py-1 rounded">{currentAppDate.toLocaleDateString()}</span>
+        </p>
+        
+        <div className="flex flex-wrap gap-3">
+          <button 
+            onClick={() => handleLogMeal(1)}
+            className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+          >
+            <FastForward size={16} /> Simulate +1 Day
+          </button>
+          <button 
+            onClick={() => {
+              for(let i=0; i<5; i++) setTimeout(() => handleLogMeal(1), i * 150);
+            }}
+            className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+          >
+            <FastForward size={16} /> Simulate +5 Days
+          </button>
+          
+          <div className="flex-1"></div>
+
+          <button 
+            onClick={resetProgress}
+            className="flex items-center gap-2 bg-red-900/40 text-red-300 hover:bg-red-900/60 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+          >
+            <RotateCcw size={16} /> Clear & Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Evolution Modal */}
+      {showEvolutionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[#2d3a1a]/60 backdrop-blur-sm">
+          <div className="bg-white max-w-sm w-full rounded-[3rem] p-8 text-center shadow-2xl animate-pop border-8 border-[#eef5e1]">
+            <div className="w-24 h-24 bg-[#eef5e1] rounded-full flex items-center justify-center mx-auto mb-6">
+               <span className="text-5xl">✨</span>
+            </div>
+            <h2 className="text-2xl font-black text-[#4a6b22] mb-2">Garden Evolved!</h2>
+            <p className="text-slate-600 mb-6 leading-relaxed">
+              {currentStage.desc} Your garden is now a <span className="font-bold text-[#5a7a2d]">{currentStage.label}</span>!
+            </p>
+            <button 
+              onClick={() => setShowEvolutionModal(false)}
+              className="w-full bg-[#8cb04e] text-white font-black py-4 rounded-2xl hover:bg-[#7a9b42] transition-all flex items-center justify-center gap-2 shadow-lg"
+            >
+              Keep Growing <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default App;

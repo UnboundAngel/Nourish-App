@@ -1,0 +1,188 @@
+│ ✓  WriteFile Writing to NourishApp\...\Modals.jsx                                                                                                    │
+│                                                                                                                                                      │
+│   1 - import React, { useState, useEffect, useMemo } from 'react';                                                                                   │
+│   2 - import { X, Leaf, ChevronLeft, Flame, ShieldCheck, Mail, ArrowRight, Cloud, Smartphone, Palette, Target, Check, Eye, EyeOff, Apple, Coffee,    │
+│     Droplet } from 'lucide-react';                                                                                                                   │
+│   3 -                                                                                                                                                │
+│   4 - // Reusable Modal Component                                                                                                                    │
+│   5 - export const Modal = ({ isOpen, onClose, title, children, theme }) => {                                                                        │
+│   6 -   // Use a transition class for the modal content itself                                                                                       │
+│   7 -   const modalClass = `${theme.card} rounded-3xl shadow-2xl transform transition-all scale-100 animate-in fade-in zoom-in-95 duration-200       │
+│     border ${theme.border} max-h-[90vh] flex flex-col ${theme.textMain} theme-transition`;                                                           │
+│   8 -                                                                                                                                                │
+│   9 -   // Conditionally apply class to body to prevent background scrolling/interaction                                                             │
+│  10 -   useEffect(() => {                                                                                                                            │
+│  11 -     if (isOpen) {                                                                                                                              │
+│  12 -       document.body.style.overflow = 'hidden';                                                                                                 │
+│  13 -       document.body.style.touchAction = 'none';                                                                                                │
+│  14 -     } else {                                                                                                                                   │
+│  15 -       document.body.style.overflow = 'unset';                                                                                                  │
+│  16 -       document.body.style.touchAction = 'auto';                                                                                                │
+│  17 -     }                                                                                                                                          │
+│  18 -     return () => {                                                                                                                             │
+│  19 -       document.body.style.overflow = 'unset';                                                                                                  │
+│  20 -       document.body.style.touchAction = 'auto';                                                                                                │
+│  21 -     };                                                                                                                                         │
+│  22 -   }, [isOpen]);                                                                                                                                │
+│  23 -                                                                                                                                                │
+│  24 -   if (!isOpen) return null;                                                                                                                    │
+│  25 -   return (                                                                                                                                     │
+│  26 -     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">                                                                  │
+│  27 -       {/* Darker backdrop to fully block background visibility/interaction */}                                                                 │
+│  28 -       <div className="absolute inset-0 bg-black/80 transition-opacity" onClick={onClose} />                                                    │
+│  29 -                                                                                                                                                │
+│  30 -       <div className={`relative w-full max-w-md ${modalClass}`}>                                                                               │
+│  31 -         <div className={`flex justify-between items-center p-5 border-b ${theme.border} z-10 rounded-t-3xl theme-transition`}>                 │
+│  32 -           <h2 className="text-xl font-bold flex items-center gap-2">{title}</h2>                                                               │
+│  33 -           <button onClick={onClose} className={`p-2 hover:bg-black/10 rounded-full transition-colors ${theme.textMain.replace('text-',         │
+│     'text-')}`}><X size={20} /></button>                                                                                                             │
+│  34 -         </div>                                                                                                                                 │
+│  35 -         {/* Added custom-scrollbar class for modal content scrolling */}                                                                       │
+│  36 -         <div className="p-5 overflow-y-auto custom-scrollbar">{children}</div>                                                                 │
+│  37 -       </div>                                                                                                                                   │
+│  38 -     </div>                                                                                                                                     │
+│  39 -   );                                                                                                                                           │
+│  40 - };                                                                                                                                             │
+│  41 -                                                                                                                                                │
+│  42 - // Full-Screen Welcome Component (Total Revamp)                                                                                                │
+│  43 - export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, currentThemeId, onThemeChange, dailyTargets, onTargetsChange, allThemes }) => │
+│     {                                                                                                                                                │
+│  44 -     const [step, setStep] = useState(0); // 0: Intro, 1: Name, 2: Sync, 3: Theme, 4: Goals                                                     │
+│  45 -     const [name, setName] = useState('');                                                                                                      │
+│  46 -     const [email, setEmail] = useState('');                                                                                                    │
+│  47 -     const [password, setPassword] = useState('');                                                                                              │
+│  48 -     const [showPassword, setShowPassword] = useState(false);                                                                                   │
+│  49 -     const [isEmailForm, setIsEmailForm] = useState(false);                                                                                     │
+│  50 -                                                                                                                                                │
+│  51 -     // Intro State                                                                                                                             │
+│  52 -     const [showIdleHint, setShowIdleHint] = useState(false);                                                                                   │
+│  53 -     const [isIntroExiting, setIsIntroExiting] = useState(false);                                                                               │
+│  54 -                                                                                                                                                │
+│  55 -     useEffect(() => {                                                                                                                          │
+│  56 -         document.body.style.overflow = 'hidden';                                                                                               │
+│  57 -         document.body.style.touchAction = 'none';                                                                                              │
+│  58 -                                                                                                                                                │
+│  59 -         // Idle timer for Step 0                                                                                                               │
+│  60 -         if (step === 0) {                                                                                                                      │
+│  61 -             const timer = setTimeout(() => setShowIdleHint(true), 3000);                                                                       │
+│  62 -             return () => clearTimeout(timer);                                                                                                  │
+│  63 -         }                                                                                                                                      │
+│  64 -                                                                                                                                                │
+│  65 -         return () => {                                                                                                                         │
+│  66 -           document.body.style.overflow = 'unset';                                                                                              │
+│  67 -           document.body.style.touchAction = 'auto';                                                                                            │
+│  68 -         };                                                                                                                                     │
+│  69 -     }, [step]);                                                                                                                                │
+│  70 -                                                                                                                                                │
+│  71 -     const handleIntroClick = () => {                                                                                                           │
+│  72 -         setShowIdleHint(false);                                                                                                                │
+│  73 -         setIsIntroExiting(true);                                                                                                               │
+│  74 -         // Wait for the expansion animation to finish before switching steps                                                                   │
+│  75 -         setTimeout(() => setStep(1), 600);                                                                                                     │
+│  76 -     };                                                                                                                                         │
+│  77 -                                                                                                                                                │
+│  78 -     const handleNext = () => setStep(prev => prev + 1);                                                                                        │
+│  79 -     const handleBack = () => setStep(prev => prev - 1);                                                                                        │
+│  80 -                                                                                                                                                │
+│  81 -     const finishOnboarding = () => {                                                                                                           │
+│  82 -         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();                                                    │
+│  83 -         onSave(capitalizedName, email);                                                                                                        │
+│  84 -     };                                                                                                                                         │
+│  85 -                                                                                                                                                │
+│  86 -     const handleEmailSignUp = async (e) => {                                                                                                   │
+│  87 -         e.preventDefault();                                                                                                                    │
+│  88 -         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();                                                    │
+│  89 -         const success = await onAuth(e, email, password, 'signup', capitalizedName, true);                                                     │
+│  90 -         if (success) setStep(3);                                                                                                               │
+│  91 -     };                                                                                                                                         │
+│  92 -                                                                                                                                                │
+│  93 -     const handleGoogleSignUp = async () => {                                                                                                   │
+│  94 -         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();                                                    │
+│  95 -         const success = await onGoogle(capitalizedName, true);                                                                                 │
+│  96 -         if (success) setStep(3);                                                                                                               │
+│  97 -     };                                                                                                                                         │
+│  98 -                                                                                                                                                │
+│  99 -     const handleSkipSync = () => {                                                                                                             │
+│ 100 -         setStep(3);                                                                                                                            │
+│ 101 -     };                                                                                                                                         │
+│ 102 -                                                                                                                                                │
+│ 103 -     return (                                                                                                                                   │
+│ 104 -         <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 md:p-8 ${theme.bg} overflow-hidden                │
+│     transition-colors duration-700`}>                                                                                                                │
+│ 105 -                                                                                                                                                │
+│ 106 -             {/* Dynamic Background Elements - Smoother & More Organic */}                                                                      │
+│ 107 -             <div className={`absolute top-[-20%] left-[-10%] w-[40rem] h-[40rem] ${theme.primary.replace('bg-', 'bg-')}/10 rounded-full        │
+│     blur-[100px] animate-float`}></div>                                                                                                              │
+│ 108 -             <div className={`absolute bottom-[-20%] right-[-10%] w-[35rem] h-[35rem] ${theme.secondary.replace('bg-', 'bg-')}/10 rounded-full  │
+│     blur-[100px] animate-float delay-1000`}></div>                                                                                                   │
+│ 109 -                                                                                                                                                │
+│ 110 -             {/* Step 0: Interactive Hero Intro */}                                                                                             │
+│ 111 -             {step === 0 && (                                                                                                                   │
+│ 112 -                 <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">                                        │
+│ 113 -                                                                                                                                                │
+│ 114 -                     {/* The Interactive "Button" */}                                                                                           │
+│ 115 -                     <button                                                                                                                    │
+│ 116 -                         onClick={handleIntroClick}                                                                                             │
+│ 117 -                         className={`relative group outline-none transition-all duration-700 ease-in-out ${isIntroExiting ? 'scale-[30]         │
+│     opacity-0 rotate-45 pointer-events-none' : 'hover:scale-105 active:scale-95'}`}                                                                  │
+│ 118 -                     >                                                                                                                          │
+│ 119 -                         {/* Glowing Aura */}                                                                                                   │
+│ 120 -                         <div className={`absolute inset-0 ${theme.primary} rounded-full blur-2xl opacity-20 group-hover:opacity-40             │
+│     group-hover:blur-3xl transition-all duration-500 animate-pulse`}></div>                                                                          │
+│ 121 -                                                                                                                                                │
+│ 122 -                         {/* Glass Icon Container */}                                                                                           │
+│ 123 -                         <div className={`relative p-10 bg-white/30 backdrop-blur-xl border border-white/40 shadow-2xl rounded-[3rem] z-10      │
+│     overflow-hidden`}>                                                                                                                               │
+│ 124 -                             {/* Inner Shine */}                                                                                                │
+│ 125 -                             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent                 │
+│     opacity-50"></div>                                                                                                                               │
+│ 126 -                                                                                                                                                │
+│ 127 -                             <Leaf                                                                                                              │
+│ 128 -                                 size={100}                                                                                                     │
+│ 129 -                                 className={`${theme.primaryText.replace('text-', 'text-')} drop-shadow-sm relative z-20`}                      │
+│ 130 -                                 strokeWidth={1.5}                                                                                              │
+│ 131 -                             />                                                                                                                 │
+│ 132 -                         </div>                                                                                                                 │
+│ 133 -                     </button>                                                                                                                  │
+│ 134 -                                                                                                                                                │
+│ 135 -                     {/* Title - Fades out on exit */}                                                                                          │
+│ 136 -                     <h1 className={`mt-12 text-7xl md:text-9xl font-black ${theme.primaryText} tracking-tighter transition-all duration-500    │
+│     ${isIntroExiting ? 'opacity-0 translate-y-10 scale-90' : 'animate-in fade-in slide-in-from-bottom-8'}`}>                                         │
+│ 137 -                         Nourish                                                                                                                │
+│ 138 -                     </h1>                                                                                                                      │
+│ 139 -                                                                                                                                                │
+│ 140 -                     {/* Cheeky Idle Hint */}                                                                                                   │
+│ 141 -                     <div className={`absolute bottom-20 transition-all duration-700 ease-out transform ${showIdleHint && !isIntroExiting ?     │
+│     'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>                                                                                      │
+│ 142 -                         <p className={`text-sm md:text-base font-bold tracking-widest uppercase ${theme.textMain} opacity-50 bg-white/20       │
+│     backdrop-blur-md px-6 py-3 rounded-full border border-white/10 shadow-sm`}>                                                                      │
+│ 143 -                             Well, what're you waiting for? Press me!                                                                           │
+│ 144 -                         </p>                                                                                                                   │
+│ 145 -                     </div>                                                                                                                     │
+│ 146 -                 </div>                                                                                                                         │
+│ 147 -             )}                                                                                                                                 │
+│ 148 -                                                                                                                                                │
+│ 149 -             {step > 0 && (                                                                                                                     │
+│ 150 -                 <div className={`relative w-full max-w-2xl ${theme.card} rounded-[3rem] shadow-2xl p-8 md:p-12 ${theme.textMain}               │
+│     theme-transition overflow-hidden animate-in zoom-in-95 duration-500`}>                                                                           │
+│ 151 -                                                                                                                                                │
+│ 152 -                     {/* Progress Indicator */}                                                                                                 │
+│ 153 -                     <div className="absolute top-0 left-0 right-0 h-1.5 flex gap-1 px-1 pt-1">                                                 │
+│ 154 -                         {[1, 2, 3, 4].map(i => (                                                                                               │
+│ 155 -                             <div key={i} className={`flex-1 h-full rounded-full transition-all duration-500 ${step >= i ? theme.primary :      │
+│     'bg-black/5'}`}></div>                                                                                                                           │
+│ 156 -                         ))}                                                                                                                    │
+│ 157 -                     </div>                                                                                                                     │
+│ 158 -                                                                                                                                                │
+│ 159 -                     {/* Step 1: Name */}                                                                                                       │
+│ 160 -                     {step === 1 && (                                                                                                           │
+│ 161 -                         <div className="text-center animate-in slide-in-from-bottom-4 duration-500">                                           │
+│ 162 -                             <h2 className={`text-4xl md:text-5xl font-black ${theme.primaryText} mb-4 tracking-tight`}>Welcome</h2>            │
+│ 163 -                             <p className="text-lg opacity-60 mb-10 max-w-sm mx-auto">Let's start with your name so we can personalize your     │
+│     experience.</p>                                                                                                                                  │
+│ 164 -                                                                                                                                                │
+│ 165 -                             <div className="space-y-6 max-w-sm mx-auto">                                                                       │
+│ 166 -                                 <input                                                                                                         │
+│ 167 -                                     type="text"                                                                                                │
+│ 168 -                                     placeholder="Your Name..."                                                                                 │
+│ 169 -                                     className={`w-full p-6 ${theme.inputBg} rounded-3xl font-bold outline-none text-2xl border-2    

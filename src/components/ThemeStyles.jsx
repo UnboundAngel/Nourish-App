@@ -121,39 +121,51 @@ export const GlobalStyles = () => (
       border-radius: 4px;
     }
 
+    /* Hide scrollbars but keep functionality */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
     /* Glow Animation for Dark Mode Moon */
     @keyframes moon-glow {
-      0% { box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.1); }
-      50% { box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.2); }
-      100% { box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.1); }
+      0% { filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.1)); }
+      50% { filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3)); }
+      100% { filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.1)); }
     }
     .moon-glow {
       animation: moon-glow 3s infinite ease-in-out;
     }
 
-    /* Water Wave Animation */
+    /* Water Wave Animation - Optimized */
     @keyframes wave-animation {
-      0% { transform: translateX(0) translateZ(0) scaleY(1); }
-      50% { transform: translateX(-25%) translateZ(0) scaleY(0.55); }
-      100% { transform: translateX(-50%) translateZ(0) scaleY(1); }
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
     }
     .wave-liquid {
-      width: 200%;
+      width: 400%;
       position: absolute;
-      top: -10px; 
+      top: -20px; 
       left: 0;
-      height: 20px; 
-      background-repeat: repeat-x;
-      border-radius: 100%;
-      opacity: 0.8;
-      animation: wave-animation 4s linear infinite;
-      background-color: rgba(59, 130, 246, 0.8); /* Match liquid color */
+      height: 40px; 
+      opacity: 0.6;
+      animation: wave-animation 6s linear infinite;
+    }
+    .wave-liquid-top {
+      width: 400%;
+      position: absolute;
+      top: -25px;
+      left: 0;
+      height: 45px;
+      opacity: 0.3;
+      animation: wave-animation 4s linear infinite reverse;
+      filter: brightness(1.2);
     }
     
     /* New FAB button style */
-    .fab-glow {
-        box-shadow: 0 10px 20px rgba(45, 90, 39, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.5);
-    }
     .fab-inner {
         transition: transform 0.15s, opacity 0.15s;
     }
@@ -198,6 +210,71 @@ export const GlobalStyles = () => (
     .streak-animate {
         animation: streak-grow 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
     }
+
+    /* Welcome Swoosh Animations */
+    @keyframes welcome-swoosh {
+        0% { transform: translateY(20px) scale(0.95); opacity: 0; filter: blur(10px); }
+        100% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+    }
+    .animate-swoosh {
+        animation: welcome-swoosh 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    
+    @keyframes gentle-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    .animate-float {
+        animation: gentle-float 4s ease-in-out infinite;
+    }
+
+    /* Organic Morphing Animation */
+    @keyframes morph {
+      0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+      50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+      100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    }
+    .animate-morph {
+      animation: morph 8s ease-in-out infinite;
+    }
+
+    /* Bloom Wave Transition - Softer & Slower */
+    @keyframes bloom-wave {
+        0% { transform: scale(0); opacity: 0.8; filter: blur(20px); }
+        100% { transform: scale(3); opacity: 0; filter: blur(100px); }
+    }
+    .bloom-wave {
+        position: absolute;
+        width: 100vmax;
+        height: 100vmax;
+        background: radial-gradient(circle, currentColor 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+        animation: bloom-wave 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        z-index: 101;
+    }
+
+    @keyframes orbital-rotate {
+        from { transform: rotate(0deg) translateX(120px) rotate(0deg); }
+        to { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
+    }
+    .animate-orbital {
+        animation: orbital-rotate 20s linear infinite;
+    }
+
+    @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+        animation: spin-slow 12s linear infinite;
+    }
+
+    /* Gooey Slime Filter */
+    .gooey-container {
+        filter: url('#goo');
+    }
+
     .clickable {
         transition: transform 0.1s, opacity 0.1s;
     }

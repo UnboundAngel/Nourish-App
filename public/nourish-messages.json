@@ -1,0 +1,533 @@
+{
+  "nothing_logged_yet": [
+    {
+      "id": "nl_001",
+      "message": "i've been waiting here all day and you haven't logged a single thing. this is fine. i'm fine.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_002",
+      "message": "okay but what DID you eat today because i genuinely have no idea.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_003",
+      "message": "you've been fed today i assume?? log it so i can stop assuming.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_004",
+      "message": "the audacity to eat and not tell me about it.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_005",
+      "message": "i don't ask for much. just a meal or two. maybe some water. that's it.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_006",
+      "message": "still nothing logged.. i'm starting to take this personally.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_007",
+      "message": "in an ideal world, your food and water would get logged here. it is clear that it isn't an ideal world yet.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_008",
+      "message": "no meals yet.. you and i both know this doesn't feel right.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_009",
+      "message": "i'm not guilt tripping you, buttttttt...",
+      "type": "funny"
+    },
+    {
+      "id": "nl_010",
+      "message": "you are SURELY going to eat at some point today.. why not take a second to log it?",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_011",
+      "message": "your body has been running on nothing all morning.. this isn't very healthy..",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_012",
+      "message": "i believe in you, so you should definitely make my beliefs come true!",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_013",
+      "message": "logging your meals is literally so easy and yet... here we are.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_014",
+      "message": "i'm not saying your day is going badly, i'm just saying i have zero evidence it's going well.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_015",
+      "message": "at some point your stomach and i need to have the same information.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_016",
+      "message": "not to be dramatic but your protein goal is just sitting there. lonely.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_017",
+      "message": "you had ONE job today and it wasn't even a hard one.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_018",
+      "message": "just log the coffee. it's a start. i'll take it.",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_019",
+      "message": "your goals are right there. they're waiting. they've been waiting since midnight actually.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_020",
+      "message": "i would love to cheer you on today but i need SOMETHING to work with.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_021",
+      "message": "you opened the app. that's step one. now feed me some data please.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_022",
+      "message": "whatever you ate this morning, i promise i won't judge. just tell me.",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_023",
+      "message": "it's giving... nothing logged. let's change that.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_024",
+      "message": "your metabolism is out here trying its best and you haven't even checked in yet.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_025",
+      "message": "hi. hello. have you eaten. please log something. thank you. bye.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_026",
+      "message": "i'm rooting for you today. i just need a little something to root for.",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_027",
+      "message": "the fridge has definitely been opened today. i can feel it. log the evidence.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_028",
+      "message": "zero meals. zero hydration. full day ahead of you. let's fix at least two of those things.",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_029",
+      "message": "you woke up today which is honestly great. now eat something and tell me about it.",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_030",
+      "message": "not logging your meals is a choice. it's just not a great one. just saying.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_031",
+      "message": "your future self is literally begging you to log today. they're very invested.",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_032",
+      "message": "i'm not mad. i'm just... disappointed. and a little hungry by proxy.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_033",
+      "message": "somewhere out there is a meal that needs to be logged. go find it.",
+      "type": "funny"
+    },
+    {
+      "id": "nl_034",
+      "message": "every great day starts somewhere. yours can start right here, right now.",
+      "type": "encouraging"
+    },
+    {
+      "id": "nl_035",
+      "message": "babe. eat something. then log it. in that order preferably.",
+      "type": "funny"
+    }
+  ],
+  "partial_day_logged": [
+    {
+      "id": "pl_001",
+      "message": "okay you logged something!! i knew you had it in you. keep going.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_002",
+      "message": "good start. don't ghost me at dinner.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_003",
+      "message": "we're mid-day and you're still logging. i am genuinely impressed.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_004",
+      "message": "not to be needy but... dinner hasn't been logged yet and i notice things.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_005",
+      "message": "your protein is giving 'we tried' energy. one more meal could fix that.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_006",
+      "message": "you started today and that's honestly the hardest part. don't stop now.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_007",
+      "message": "a few meals down and the day still has room to be really good. finish it out.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_008",
+      "message": "when's the last time you had water. don't answer that. just drink some.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_009",
+      "message": "you're doing better than you think. i'm tracking it. i would know.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_010",
+      "message": "the morning version of you logged a meal. the afternoon version of you owes me one.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_011",
+      "message": "some people log zero meals a day. you are not those people. today at least.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_012",
+      "message": "the afternoon slump is real and i get it. a snack and a log would help us both.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_013",
+      "message": "still going. still logging. that really is the whole game.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_014",
+      "message": "dinner's coming and i am already excited about it. don't let me down.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_015",
+      "message": "tracking isn't about being perfect. it's about knowing. and right now, you know.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_016",
+      "message": "calories are looking good. carbs are hanging in there. protein could use a pep talk.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_017",
+      "message": "you're building a habit and it's actually working. wild right?",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_018",
+      "message": "i see a snack was logged earlier. very sneaky. very valid. keep it up.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_019",
+      "message": "mid-day check-in: you're on track. don't let the afternoon ruin a perfectly good morning.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_020",
+      "message": "one logged meal turns into two. two turns into a streak. streaks turn into results. you're already in it.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_021",
+      "message": "the day isn't done. neither are you. log dinner and let's close this one out properly.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_022",
+      "message": "real talk: you're doing well today. same energy for the rest of it please.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_023",
+      "message": "you logged breakfast and i haven't heard from you since. everything okay??",
+      "type": "funny"
+    },
+    {
+      "id": "pl_024",
+      "message": "partial credit is still credit. finish strong and make it full credit.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_025",
+      "message": "the day's not over and neither is your shot at a really solid log. just saying.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_026",
+      "message": "you ate. you logged. the app is happy. drink some water and make it perfect.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_027",
+      "message": "dinner doesn't log itself. believe me, i've tried to make that happen.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_028",
+      "message": "every meal you log is a little vote for the person you're trying to become. keep voting.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_029",
+      "message": "not done yet but already doing great. that's a vibe i can work with.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_030",
+      "message": "hydration check. the number i see is making me concerned. drink up.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_031",
+      "message": "you're in the middle of a good day. weird how that happens when you actually track things.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_032",
+      "message": "i'm invested in how today ends. please don't leave me on read.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_033",
+      "message": "progress looks like this. not perfect. just consistent. i love that for you.",
+      "type": "encouraging"
+    },
+    {
+      "id": "pl_034",
+      "message": "you're so close to a complete day. it would be a shame to stop now. truly.",
+      "type": "funny"
+    },
+    {
+      "id": "pl_035",
+      "message": "the version of you that logged breakfast deserves a full day of support. be that person.",
+      "type": "encouraging"
+    }
+  ],
+  "goal_hit": [
+    {
+      "id": "gh_001",
+      "message": "you hit your goals today. go outside and act like nothing happened. you earned it.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_002",
+      "message": "every single macro. who ARE you and what have you done with the person who logged nothing yesterday.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_003",
+      "message": "okay i'm not going to make a big deal out of this but... that was incredible.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_004",
+      "message": "this is what a good day looks like. screenshot it. remember this feeling.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_005",
+      "message": "protein: check. calories: check. carbs: check. attitude: clearly excellent.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_006",
+      "message": "you set a goal and then you met it. that's genuinely it. that's the whole secret.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_007",
+      "message": "full day. full log. full send. i am so proud of you i can't even explain it.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_008",
+      "message": "today was a good one. not because it was perfect — because you actually showed up.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_009",
+      "message": "your goals called. they said you can relax now. they also said do it again tomorrow.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_010",
+      "message": "a complete day. a complete log. a complete legend. yes i'm talking about you.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_011",
+      "message": "do it again tomorrow. just like that. exactly like that.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_012",
+      "message": "macro goals met. hydration solid. you're basically a different person than you were this morning.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_013",
+      "message": "days like today are the ones that quietly add up to something really big. nice work.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_014",
+      "message": "your discipline is showing and honestly? it looks really good on you.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_015",
+      "message": "protein goal hit. science says your muscles are happy. i'm also happy. we're all happy.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_016",
+      "message": "i was rooting for you today and you absolutely delivered. thank you for that.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_017",
+      "message": "one perfect day doesn't change everything. but it's part of what does.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_018",
+      "message": "clean log. great day. you make this look easy and i know for a fact it isn't always.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_019",
+      "message": "goals hit. body fed. app satisfied. go rest. you've done enough today.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_020",
+      "message": "every macro in range. hydration on point. you basically speedran today and won.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_021",
+      "message": "this is what taking care of yourself looks like. i hope you're proud because i definitely am.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_022",
+      "message": "full green day. frame it. put it on the fridge. tell a stranger.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_023",
+      "message": "you didn't just track today. you followed through. that's the harder part and you did it.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_024",
+      "message": "logged everything. hit every target. i would give you a high five if i had hands.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_025",
+      "message": "look at the numbers. you built that today. that's all you.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_026",
+      "message": "today's log was so clean it's making me emotional. well done.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_027",
+      "message": "the version of you that started this app would not believe today's log. look how far you've come.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_028",
+      "message": "you ate well, logged everything, and hit your goals. i don't know what else to tell you. that's just winning.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_029",
+      "message": "not to be dramatic but this might be the best log i've ever seen. and i've seen a lot of logs.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_030",
+      "message": "okay but can you do it again tomorrow? asking for me. and also for your goals.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_031",
+      "message": "you showed up today when you didn't have to. that matters more than the numbers.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_032",
+      "message": "every goal. every meal. every log. all of it today. you're that person now.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_033",
+      "message": "this is the kind of day that makes the hard days worth it. remember that.",
+      "type": "encouraging"
+    },
+    {
+      "id": "gh_034",
+      "message": "i'm going to need you to bring this same energy tomorrow. no pressure. a little pressure.",
+      "type": "funny"
+    },
+    {
+      "id": "gh_035",
+      "message": "goals crushed. day complete. honestly what can't you do.",
+      "type": "funny"
+    }
+  ]
+}
