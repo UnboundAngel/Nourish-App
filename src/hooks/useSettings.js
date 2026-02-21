@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
 
 export function useSettings() {
@@ -68,32 +68,58 @@ export function useSettings() {
       if (userName) localStorage.setItem('nourish-user-name', userName);
   }, [userName]);
 
-  const handleThemeChange = async (newTheme, user) => {
+  // --- Debounced Profile Sync ---
+  const pendingUpdates = useRef({});
+  const debounceTimer = useRef(null);
+
+  const flushProfileUpdate = useCallback(async (user) => {
+    if (!user || Object.keys(pendingUpdates.current).length === 0) return;
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), 
+        pendingUpdates.current, { merge: true });
+      pendingUpdates.current = {};
+    } catch (e) { console.error('Profile sync error:', e); }
+  }, []);
+
+  const queueProfileUpdate = useCallback((updates, user) => {
+    pendingUpdates.current = { ...pendingUpdates.current, ...updates };
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => flushProfileUpdate(user), 2000);
+  }, [flushProfileUpdate]);
+
+  const handleThemeChange = (newTheme, user) => {
       setCurrentThemeId(newTheme);
-      if (user) {
-          await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), {
-              theme: newTheme
-          }, { merge: true });
-      }
+      if (user) queueProfileUpdate({ theme: newTheme }, user);
   };
 
-  const handleTimeFormatChange = async (val, user) => {
+  const handleTimeFormatChange = (val, user) => {
       setUse24HourTime(val);
-      if (user) {
-          await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), {
-              use24HourTime: val
-          }, { merge: true });
-      }
+      if (user) queueProfileUpdate({ use24HourTime: val }, user);
   };
 
   const handleEmailSettingsSave = async (e, user) => {
       if (e) e.preventDefault();
       if (!user) return;
+      // Email settings flush immediately (user clicks save)
       await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), {
           email: userEmail,
           dailySummary,
           weeklySummary
       }, { merge: true });
+      // Sync to flat email_subscribers collection for efficient cron queries
+      if (dailySummary && userEmail) {
+          await setDoc(doc(db, 'artifacts', appId, 'email_subscribers', user.uid), {
+              email: userEmail,
+              displayName: userName,
+              dailySummary,
+              weeklySummary
+          });
+      } else {
+          // Remove from subscribers if opted out or no email
+          try {
+              await deleteDoc(doc(db, 'artifacts', appId, 'email_subscribers', user.uid));
+          } catch (_) { /* doc may not exist */ }
+      }
       alert("Email preferences saved!");
   };
 
@@ -101,6 +127,7 @@ export function useSettings() {
     setDailyTargets(newTargets);
     localStorage.setItem('nourish-daily-targets', JSON.stringify(newTargets));
     if (user && !user.isAnonymous) {
+        // Targets flush immediately (user clicks save)
         await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), {
             dailyTargets: newTargets
         }, { merge: true });

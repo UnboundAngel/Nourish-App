@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, query, updateDoc, setDoc, getDoc, getDocs, where, orderBy } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
 import { saveEntries, loadEntries } from '../storage.js';
 
@@ -15,50 +15,53 @@ export function useEntries({ user }) {
   });
   const syncInProgress = useRef(false);
 
-  // --- Data Sync ---
-  useEffect(() => {
+  const fetchEntries = useCallback(async () => {
     if (!user || user.isAnonymous) {
       const localEntries = loadEntries();
       setEntries(localEntries);
       return;
     }
+    if (syncInProgress.current) return;
+    syncInProgress.current = true;
 
-    const syncAndFetch = async () => {
-      if (syncInProgress.current) return;
-      syncInProgress.current = true;
-
-      try {
-        const localEntries = loadEntries();
-        const localOnlyEntries = localEntries.filter(e => e.id && String(e.id).startsWith('local_'));
-        
-        if (localOnlyEntries.length > 0) {
-          const collectionRef = collection(db, 'artifacts', appId, 'users', user.uid, 'journal_entries');
-          for (const entry of localOnlyEntries) {
-            const { id: _id, ...entryWithoutId } = entry;
-            await addDoc(collectionRef, entryWithoutId);
-          }
-          saveEntries([]); 
+    try {
+      // Sync local-only entries to Firestore
+      const localEntries = loadEntries();
+      const localOnlyEntries = localEntries.filter(e => e.id && String(e.id).startsWith('local_'));
+      if (localOnlyEntries.length > 0) {
+        const collectionRef = collection(db, 'artifacts', appId, 'users', user.uid, 'journal_entries');
+        for (const entry of localOnlyEntries) {
+          const { id: _id, ...entryWithoutId } = entry;
+          await addDoc(collectionRef, entryWithoutId);
         }
-
-        const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'journal_entries'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setEntries(data);
-          saveEntries(data); 
-        });
-
-        return unsubscribe;
-      } finally {
-        syncInProgress.current = false;
+        saveEntries([]);
       }
-    };
 
-    const unsubscribePromise = syncAndFetch();
-
-    return () => {
-      unsubscribePromise.then(unsubscribe => unsubscribe && unsubscribe());
-    };
+      // Fetch last 30 days of entries (one-time read, no persistent listener)
+      const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+      const q = query(
+        collection(db, 'artifacts', appId, 'users', user.uid, 'journal_entries'),
+        where('createdAt', '>=', thirtyDaysAgo),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setEntries(data);
+      saveEntries(data);
+    } catch (error) {
+      console.error('Error fetching entries:', error);
+      // Fallback to localStorage
+      const localEntries = loadEntries();
+      if (localEntries.length > 0) setEntries(localEntries);
+    } finally {
+      syncInProgress.current = false;
+    }
   }, [user]);
+
+  // --- Data Sync ---
+  useEffect(() => {
+    fetchEntries();
+  }, [fetchEntries]);
 
   // --- Computed ---
   const getEntriesForDate = useCallback((date, currentSearchTerm, currentSortBy, currentActiveTags) => {
@@ -194,6 +197,8 @@ export function useEntries({ user }) {
                 setShowStreakCelebration(true);
             }
         }
+        // Re-fetch to sync local state with Firestore
+        fetchEntries();
       } catch (error) { console.error(error); }
     } else {
       const newEntry = {
@@ -230,7 +235,7 @@ export function useEntries({ user }) {
     
     setIsModalOpen(false);
     setEditingId(null);
-  }, [user, editingId, entries]);
+  }, [user, editingId, entries, fetchEntries]);
 
   const handleDelete = useCallback(async (e, id) => {
     e.stopPropagation();
@@ -253,6 +258,13 @@ export function useEntries({ user }) {
     
     const updatedFinishedState = !entry.finished;
 
+    // Optimistically update local state
+    const updatedEntries = entries.map(e => 
+      e.id === entry.id ? { ...e, finished: updatedFinishedState } : e
+    );
+    setEntries(updatedEntries);
+    saveEntries(updatedEntries);
+
     if (user && !user.isAnonymous) {
       try {
         await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'journal_entries', entry.id), {
@@ -261,12 +273,6 @@ export function useEntries({ user }) {
       } catch (error) {
         console.error("Error updating finish state in Firestore:", error);
       }
-    } else {
-      const updatedEntries = entries.map(e => 
-        e.id === entry.id ? { ...e, finished: updatedFinishedState } : e
-      );
-      setEntries(updatedEntries);
-      saveEntries(updatedEntries);
     }
   }, [user, entries]);
 

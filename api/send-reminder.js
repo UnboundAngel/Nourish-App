@@ -24,20 +24,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Fetch all users who have daily summary enabled and have an email
-    const usersSnapshot = await db.collectionGroup('profile')
+    // 1. Fetch only opted-in subscribers from the flat email_subscribers collection
+    // This scales as O(subscribers) instead of O(all users)
+    const subscribersSnapshot = await db.collection('artifacts/default-app-id/email_subscribers')
       .where('dailySummary', '==', true)
       .get();
 
     const results = [];
 
-    for (const userDoc of usersSnapshot.docs) {
-      const userData = userDoc.data();
-      const userEmail = userData.email;
-      const userName = userData.displayName || 'Friend';
-      
-      // Need to find the userId from the path (artifacts/default-app-id/users/{userId}/profile/main)
-      const userId = userDoc.ref.parent.parent.id;
+    for (const subDoc of subscribersSnapshot.docs) {
+      const subData = subDoc.data();
+      const userEmail = subData.email;
+      const userName = subData.displayName || 'Friend';
+      const userId = subDoc.id;
 
       if (!userEmail) continue;
 

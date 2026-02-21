@@ -140,6 +140,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
     const handleSkipSync = () => {
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
         localStorage.setItem('nourish-user-name', capitalizedName);
+        localStorage.setItem('nourish-device-only', 'true');
         onSave(capitalizedName, ''); 
     };
 

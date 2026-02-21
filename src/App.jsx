@@ -18,6 +18,7 @@ import { useStreak } from './hooks/useStreak';
 import { useHydration } from './hooks/useHydration';
 import { useNotifications } from './hooks/useNotifications';
 import { useWhisper } from './hooks/useWhisper';
+import { useUpdateCheck } from './hooks/useUpdateCheck';
 import { formatTime } from './utils/helpers';
 
 export default function NourishApp() {
@@ -60,7 +61,7 @@ export default function NourishApp() {
 
   // --- Auth ---
   const {
-    user, loading,
+    user, profileData, loading,
     authMode, setAuthMode,
     email, setEmail,
     password, setPassword,
@@ -95,7 +96,7 @@ export default function NourishApp() {
   } = useEntries({ user });
 
   // --- Streak ---
-  useStreak({ user, loading, entries, getEntriesForDate, setDailyStreak });
+  useStreak({ user, loading, profileData, entries, getEntriesForDate, setDailyStreak });
 
   // --- Notifications ---
   const {
@@ -109,6 +110,9 @@ export default function NourishApp() {
 
   // --- Daily Whisper ---
   const { dailyWhisper } = useWhisper({ todaysEntries, todaysTotals, dailyTargets });
+
+  // --- Update Check (checks every 60s if a new deploy is available) ---
+  const { updateAvailable, refresh } = useUpdateCheck();
 
   // --- Wrapped Settings Handlers (pass live user) ---
   const handleThemeChange = (newTheme) => rawHandleThemeChange(newTheme, user);
@@ -145,6 +149,16 @@ export default function NourishApp() {
   return (
     <div className={`min-h-screen flex ${theme.bg} transition-colors duration-500 font-sans text-slate-800`}>
       <GlobalStyles />
+
+      {/* Update Available Banner */}
+      {updateAvailable && (
+        <div className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-center px-4 py-3 bg-gradient-to-r from-emerald-600 to-green-500 text-white shadow-lg animate-in slide-in-from-top duration-500">
+          <span className="text-sm font-bold mr-3">A new version of Nourish is available</span>
+          <button onClick={refresh} className="px-4 py-1.5 bg-white/20 hover:bg-white/30 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-sm transition-all hover:scale-105 active:scale-95">
+            Refresh
+          </button>
+        </div>
+      )}
       
       {/* Welcome Screen */}
       {showWelcome && (

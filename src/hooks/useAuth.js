@@ -15,6 +15,7 @@ import { auth, db, appId } from '../config/firebase';
 
 export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setUserEmail, setDailySummary, setWeeklySummary, setDailyStreak, setWaterOz, setDailyTargets, setEditedTargets, setShowWelcome }) {
   const [user, setUser] = useState(null);
+  const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authMode, setAuthMode] = useState('login');
   const [email, setEmail] = useState('');
@@ -24,6 +25,23 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
         if (!u) {
+            // Check if user previously chose "Device Only" mode
+            const isDeviceOnly = localStorage.getItem('nourish-device-only') === 'true';
+            const localName = localStorage.getItem('nourish-user-name');
+            
+            if (isDeviceOnly || !localName) {
+                // Device-only mode OR first-time visitor: no Firebase auth yet
+                // Anonymous auth will be created later only if user needs Firestore
+                if (localName) {
+                    setUserName(localName);
+                    setShowWelcome(false);
+                } else {
+                    setShowWelcome(true);
+                }
+                setLoading(false);
+                return;
+            }
+            // Returning user who previously signed in — restore auth
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { // eslint-disable-line no-undef
                     await signInWithCustomToken(auth, __initial_auth_token); // eslint-disable-line no-undef
@@ -85,8 +103,12 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
                 }
             }
 
+            // Cache profile data for other hooks
+            setProfileData(data);
         } catch (e) { console.log("Profile fetch error", e) }
         
+        // Clear device-only flag since user is now authenticated
+        localStorage.removeItem('nourish-device-only');
         setLoading(false);
     });
     return () => unsubscribe();
@@ -185,6 +207,7 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
 
   return {
     user,
+    profileData,
     loading,
     authMode, setAuthMode,
     email, setEmail,

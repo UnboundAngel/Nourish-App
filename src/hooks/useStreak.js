@@ -1,21 +1,18 @@
 import { useEffect } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
 
-export function useStreak({ user, loading, entries, getEntriesForDate, setDailyStreak }) {
+export function useStreak({ user, loading, profileData, entries, getEntriesForDate, setDailyStreak }) {
   useEffect(() => {
-    if (!user || loading) return;
+    if (!user || loading || !profileData) return;
 
     const checkStreak = async () => {
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
         
-        const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main');
-        const docSnap = await getDoc(docRef);
-        const data = docSnap.exists() ? docSnap.data() : {};
-        
-        const lastLoginStr = data.lastLogin || '';
-        const currentStreak = data.dailyStreak || 0;
+        // Use cached profile data instead of re-reading from Firestore
+        const lastLoginStr = profileData.lastLogin || '';
+        const currentStreak = profileData.dailyStreak || 0;
         
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
@@ -35,6 +32,7 @@ export function useStreak({ user, loading, entries, getEntriesForDate, setDailyS
                 newStreak = 0;
             }
 
+            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main');
             await setDoc(docRef, {
                 lastLogin: todayStr,
                 dailyStreak: newStreak,
@@ -44,5 +42,5 @@ export function useStreak({ user, loading, entries, getEntriesForDate, setDailyS
     };
     
     checkStreak(); 
-  }, [user, loading, entries, getEntriesForDate, setDailyStreak]);
+  }, [user, loading, profileData, entries, getEntriesForDate, setDailyStreak]);
 }
