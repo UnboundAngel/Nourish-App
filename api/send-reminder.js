@@ -54,8 +54,10 @@ export default async function handler(req, res) {
       const mealCount = meals.length;
 
       // 3. Send the email using Resend
+      // NOTE: To use a custom domain, verify it in your Resend dashboard at https://resend.com/domains
+      // For testing, using the Resend sandbox address (only sends to verified emails in your Resend account)
       const { data, error } = await resend.emails.send({
-        from: 'Nourish <reminders@yourdomain.com>',
+        from: 'Nourish <onboarding@resend.dev>',
         to: [userEmail],
         subject: `Your Daily Nourish Summary: ${mealCount} meals today`,
         html: `
