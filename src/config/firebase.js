@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -13,6 +13,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+// Use localStorage persistence for iOS standalone/homescreen PWA compatibility
+setPersistence(auth, browserLocalPersistence).catch(console.error);
 export const db = getFirestore(app);
 export const appId = 'default-app-id';
 

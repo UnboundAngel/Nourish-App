@@ -14,7 +14,7 @@ export function SettingsModal({
   email, setEmail,
   password, setPassword,
   showPassword, setShowPassword,
-  handleAuth, handleGoogleLogin,
+  handleAuth, handleGoogleLogin, handleForgotPassword,
   // Appearance
   currentThemeId, handleThemeChange,
   use24HourTime, handleTimeFormatChange,
@@ -80,6 +80,15 @@ export function SettingsModal({
                     <button onClick={handleGoogleLogin} className={`w-full py-3 bg-white shadow-sm rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-50 active:scale-95 ${theme.textMain} theme-transition`}>
                         <span className="text-lg">G</span> Continue with Google
                     </button>
+                    {authMode === 'login' && (
+                        <button 
+                            type="button" 
+                            onClick={() => handleForgotPassword(email)}
+                            className={`w-full text-center text-xs font-bold opacity-40 hover:opacity-100 transition-opacity py-1 ${theme.textMain}`}
+                        >
+                            Forgot Password?
+                        </button>
+                    )}
                 </div>
             )}
 

@@ -73,7 +73,7 @@ export const Modal = ({ isOpen, onClose, title, children, theme, maxWidth = 'max
 };
 
 // Full-Screen Welcome Component (Gooey Slime & Fixed Auth)
-export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, currentThemeId, onThemeChange, dailyTargets, onTargetsChange, allThemes }) => {
+export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPassword, currentThemeId, onThemeChange, dailyTargets, onTargetsChange, allThemes }) => {
     const [step, setStep] = useState(0); 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -330,6 +330,9 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, currentThemeId,
                                     <button type="submit" className={`w-full py-4 rounded-2xl ${theme.primary} text-white font-bold text-lg shadow-lg hover:scale-105 active:scale-95 transition-all`}>
                                         {authMode === 'signup' ? 'Create Account' : 'Sign In'}
                                     </button>
+                                    {authMode === 'login' && (
+                                        <button type="button" onClick={() => onForgotPassword(email)} className="w-full text-center text-xs font-bold opacity-40 hover:opacity-100 transition-opacity py-1">Forgot Password?</button>
+                                    )}
                                     <button type="button" onClick={() => setIsEmailForm(false)} className="w-full text-center text-xs font-bold opacity-40 py-2">Back to options</button>
                                 </form>
                             )}

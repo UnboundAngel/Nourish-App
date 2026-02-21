@@ -1,0 +1,24 @@
+{
+  "name": "Nourish",
+  "short_name": "Nourish",
+  "description": "Track your meals, hydration, and grow your garden",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2D5A27",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/Nourish-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Nourish-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

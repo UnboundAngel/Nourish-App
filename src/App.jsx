@@ -68,6 +68,7 @@ export default function NourishApp() {
     handleSaveProfileFull,
     handleAuth: rawHandleAuth,
     handleGoogleLogin: rawHandleGoogleLogin,
+    handleForgotPassword,
   } = useAuth({
     setUserName, setCurrentThemeId, setUse24HourTime, setUserEmail,
     setDailySummary, setWeeklySummary, setDailyStreak, setWaterOz: (v) => hydration.setWaterOz(v),
@@ -152,6 +153,7 @@ export default function NourishApp() {
             theme={theme}
             onAuth={handleAuth}
             onGoogle={handleGoogleLogin}
+            onForgotPassword={handleForgotPassword}
             currentThemeId={currentThemeId}
             onThemeChange={handleThemeChange}
             dailyTargets={dailyTargets}
@@ -288,6 +290,7 @@ export default function NourishApp() {
         setShowPassword={setShowPassword}
         handleAuth={handleAuth}
         handleGoogleLogin={handleGoogleLogin}
+        handleForgotPassword={handleForgotPassword}
         currentThemeId={currentThemeId}
         handleThemeChange={handleThemeChange}
         use24HourTime={use24HourTime}

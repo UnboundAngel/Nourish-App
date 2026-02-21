@@ -7,7 +7,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  signOut
+  signOut,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db, appId } from '../config/firebase';
@@ -59,7 +60,14 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
             
             if (data.theme) setCurrentThemeId(data.theme);
             if (data.use24HourTime !== undefined) setUse24HourTime(data.use24HourTime);
-            if (data.email) setUserEmail(data.email);
+            if (data.email) {
+                setUserEmail(data.email);
+            } else if (u.email) {
+                // Auto-populate notification email from auth email if none stored
+                setUserEmail(u.email);
+                // Also persist it to Firestore so the cron job can find it
+                await setDoc(docRef, { email: u.email }, { merge: true });
+            }
             if (data.dailySummary !== undefined) setDailySummary(data.dailySummary);
             if (data.weeklySummary !== undefined) setWeeklySummary(data.weeklySummary);
             if (data.dailyStreak !== undefined) setDailyStreak(data.dailyStreak);
@@ -151,6 +159,22 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
       }
   };
 
+  const handleForgotPassword = async (resetEmail) => {
+    const targetEmail = resetEmail || email;
+    if (!targetEmail) {
+      alert('Please enter your email address first.');
+      return false;
+    }
+    try {
+      await sendPasswordResetEmail(auth, targetEmail);
+      alert(`Password reset email sent to ${targetEmail}. Check your inbox.`);
+      return true;
+    } catch (error) {
+      alert(error.message);
+      return false;
+    }
+  };
+
   const handleSignOut = () => signOut(auth);
 
   return {
@@ -163,6 +187,7 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
     handleSaveProfileFull,
     handleAuth,
     handleGoogleLogin,
+    handleForgotPassword,
     handleSignOut,
   };
 }
