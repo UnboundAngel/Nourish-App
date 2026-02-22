@@ -10,6 +10,7 @@ import { MainContent } from './components/MainContent';
 import { FAB } from './components/FAB';
 const SettingsModal = lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { TrendsPage } from './components/TrendsPage';
 import { NourishGarden } from './components/NourishGarden';
 import { useSettings } from './hooks/useSettings';
 import { useAuth } from './hooks/useAuth';
@@ -18,6 +19,7 @@ import { useStreak } from './hooks/useStreak';
 import { useHydration } from './hooks/useHydration';
 import { useNotifications } from './hooks/useNotifications';
 import { useWhisper } from './hooks/useWhisper';
+import { useInsights } from './hooks/useInsights';
 import { useUpdateCheck } from './hooks/useUpdateCheck';
 import { formatTime } from './utils/helpers';
 
@@ -57,6 +59,7 @@ export default function NourishApp() {
 
   // --- Mobile State ---
   const [isStreakOpen, setIsStreakOpen] = useState(false);
+  const [isTrendsOpen, setIsTrendsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
 
   // --- Auth ---
@@ -96,7 +99,7 @@ export default function NourishApp() {
   } = useEntries({ user });
 
   // --- Streak ---
-  useStreak({ user, loading, profileData, entries, getEntriesForDate, setDailyStreak });
+  useStreak({ user, loading, profileData, getEntriesForDate, setDailyStreak });
 
   // --- Notifications ---
   const {
@@ -110,6 +113,9 @@ export default function NourishApp() {
 
   // --- Daily Whisper ---
   const { dailyWhisper } = useWhisper({ todaysEntries, todaysTotals, dailyTargets });
+
+  // --- Insights & Experiments ---
+  const insights = useInsights(entries, user);
 
   // --- Update Check (checks every 60s if a new deploy is available) ---
   const { updateAvailable, refresh } = useUpdateCheck();
@@ -173,11 +179,12 @@ export default function NourishApp() {
             dailyTargets={dailyTargets}
             onTargetsChange={setDailyTargets}
             allThemes={THEMES}
+            setShowWelcome={setShowWelcome}
         />
       )}
 
       {/* Desktop Sidebar */}
-      <Sidebar
+      {!showWelcome && <Sidebar
         theme={theme}
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
@@ -185,6 +192,7 @@ export default function NourishApp() {
         setIsHistoryOpen={setIsHistoryOpen}
         setIsCalendarOpen={setIsCalendarOpen}
         setIsSettingsOpen={setIsSettingsOpen}
+        setIsTrendsOpen={setIsTrendsOpen}
         dailyStreak={dailyStreak}
         getEntriesForDate={getEntriesForDate}
         isNotificationsOpen={isNotificationsOpen}
@@ -193,7 +201,7 @@ export default function NourishApp() {
         notifications={notifications}
         handleNotificationClick={handleNotificationClick}
         unreadCount={unreadCount}
-      />
+      />}
 
       {/* Main Content Area */}
       <main className="flex-1 min-h-screen relative overflow-y-auto custom-scrollbar">
@@ -236,29 +244,31 @@ export default function NourishApp() {
           dailyStreak={dailyStreak}
           getEntriesForDate={getEntriesForDate}
           setIsStreakOpen={setIsStreakOpen}
+          insights={insights}
         />
       </main>
 
       {/* FAB */}
-      <FAB
+      {!showWelcome && <FAB
         theme={theme}
         isFabMenuOpen={isFabMenuOpen}
         setIsFabMenuOpen={setIsFabMenuOpen}
         handleAddWater={handleAddWater}
         openNewEntryModal={openNewEntryModal}
-      />
+      />}
 
       {/* Mobile Bottom Nav */}
-      <MobileBottomNav
+      {!showWelcome && <MobileBottomNav
         theme={theme}
         dailyStreak={dailyStreak}
         setIsCalendarOpen={setIsCalendarOpen}
         setIsSettingsOpen={setIsSettingsOpen}
         setIsStreakOpen={setIsStreakOpen}
         setIsFabMenuOpen={setIsFabMenuOpen}
+        setIsTrendsOpen={setIsTrendsOpen}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-      />
+      />}
 
       {/* Garden / Streak Modal (Mobile) */}
       <Modal isOpen={isStreakOpen} onClose={() => setIsStreakOpen(false)} title="Your Nourish Garden" theme={theme}>
@@ -410,6 +420,17 @@ export default function NourishApp() {
           </button>
         </div>
       </Modal>
+
+      {/* Trends Page */}
+      {isTrendsOpen && (
+        <TrendsPage
+          entries={entries}
+          theme={theme}
+          dailyTargets={dailyTargets}
+          onClose={() => setIsTrendsOpen(false)}
+          insights={insights}
+        />
+      )}
 
       {/* Streak Celebration */}
       {showStreakCelebration && (

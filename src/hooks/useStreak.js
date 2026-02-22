@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
 
-export function useStreak({ user, loading, profileData, entries, getEntriesForDate, setDailyStreak }) {
+export function useStreak({ user, loading, profileData, getEntriesForDate, setDailyStreak }) {
   useEffect(() => {
     if (!user || loading || !profileData) return;
 
@@ -42,5 +42,5 @@ export function useStreak({ user, loading, profileData, entries, getEntriesForDa
     };
     
     checkStreak(); 
-  }, [user, loading, profileData, entries, getEntriesForDate, setDailyStreak]);
+  }, [user, loading, profileData, setDailyStreak]);
 }

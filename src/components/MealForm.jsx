@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Clock, Coffee, Sun, Moon, Apple, Plus, CheckCircle, Circle, ChevronUp, ChevronDown, Utensils, Heart, Info, X, Tag } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Clock, ChevronUp, ChevronDown, X, Tag } from 'lucide-react';
 import { Modal } from './Modals';
+import { FEELING_LIST, normalizeFeeling } from '../utils/feelings';
 
 const CALORIE_MAP = {
     protein: 4,
@@ -17,6 +18,15 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         time: '12:00', finished: true, feeling: 'good', note: '', tags: ''
     });
     const [isChangingTime, setIsChangingTime] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [showScrollHint, setShowScrollHint] = useState(true);
+    const nameRef = useRef(null);
+    const caloriesRef = useRef(null);
+    const caloriesInputRef = useRef(null);
+    const calHubRef = useRef(null);
+    const touchStartY = useRef(null);
+    const formDataRef = useRef(formData);
+    const errorsRef = useRef(errors);
 
     // --- Helpers ---
     const getCurrentTime = useCallback(() => {
@@ -45,8 +55,32 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                 });
             }
             setIsChangingTime(false);
+            setErrors({});
+            setShowScrollHint(true);
         }
     }, [isOpen, editingId, initialData, getCurrentTime]);
+
+    // Keep refs in sync with state for the native wheel listener
+    useEffect(() => { formDataRef.current = formData; }, [formData]);
+    useEffect(() => { errorsRef.current = errors; }, [errors]);
+
+    // Attach a NATIVE non-passive wheel listener so preventDefault() actually works
+    useEffect(() => {
+        const el = calHubRef.current;
+        if (!el) return;
+        const onWheel = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowScrollHint(false);
+            const delta = e.deltaY > 0 ? -10 : 10;
+            const cur = Number(formDataRef.current.calories) || 0;
+            const newCals = Math.max(0, cur + delta);
+            setFormData(prev => ({...prev, calories: newCals.toString()}));
+            if (errorsRef.current.calories && newCals > 0) setErrors(prev => ({...prev, calories: null}));
+        };
+        el.addEventListener('wheel', onWheel, { passive: false });
+        return () => el.removeEventListener('wheel', onWheel);
+    }, [isOpen]);
 
     // --- Handlers ---
     const handleMacroChange = (macro, value) => {
@@ -82,8 +116,46 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         setFormData({ ...formData, time: `${hours.toString().padStart(2, '0')}:${m}` });
     };
 
+    const handleCaloriesTouchStart = (e) => {
+        touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleCaloriesTouchMove = (e) => {
+        if (touchStartY.current === null) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setShowScrollHint(false);
+        const touchY = e.touches[0].clientY;
+        const deltaY = touchStartY.current - touchY;
+        if (Math.abs(deltaY) > 10) {
+            const delta = deltaY > 0 ? 5 : -5;
+            const newCals = Math.max(0, Number(formData.calories) + delta);
+            setFormData({...formData, calories: newCals.toString()});
+            if (errors.calories && newCals > 0) setErrors(prev => ({...prev, calories: null}));
+            touchStartY.current = touchY;
+        }
+    };
+
+    const handleCaloriesTouchEnd = () => {
+        touchStartY.current = null;
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        const newErrors = {};
+        if (!formData.name.trim()) newErrors.name = 'Please enter a meal name';
+        if (!Number(formData.calories) || Number(formData.calories) <= 0) newErrors.calories = 'Calories must be greater than 0';
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            // Scroll to first error
+            const firstRef = newErrors.name ? nameRef : caloriesRef;
+            if (firstRef.current) {
+                firstRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstRef.current.focus();
+            }
+            return;
+        }
+        setErrors({});
         onSave(formData);
     };
 
@@ -124,19 +196,24 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={editingId ? "Edit Meal" : "New Meal"} theme={theme} maxWidth="max-w-xl">
-            <form onSubmit={handleSubmit} className="space-y-8 py-4 outline-none">
+            <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 py-2 sm:py-4 outline-none">
                 
                 {/* 1. TOP BAR: NAME & TIME */}
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                     <div className="text-center">
                         <input 
+                            ref={nameRef}
                             type="text" 
                             placeholder="What did you eat?" 
-                            className={`w-full bg-transparent font-black text-3xl outline-none placeholder:opacity-10 ${theme.textMain} text-center`} 
+                            className={`w-full bg-transparent font-black text-2xl sm:text-3xl outline-none placeholder:opacity-10 ${theme.textMain} text-center border-b-2 pb-2 transition-colors ${errors.name ? 'border-rose-500' : 'border-transparent'}`} 
                             value={formData.name} 
-                            onChange={e => setFormData({...formData, name: e.target.value})} 
-                            required 
+                            onChange={e => { 
+                                const newName = e.target.value;
+                                setFormData({...formData, name: newName}); 
+                                if (errors.name && newName.trim()) setErrors(prev => ({...prev, name: null})); 
+                            }} 
                         />
+                        {errors.name && <p className="text-rose-500 text-xs font-bold mt-2 animate-in fade-in slide-in-from-top-1 duration-200">{errors.name}</p>}
                     </div>
 
                     <div className="flex justify-center">
@@ -161,13 +238,16 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                             <button type="button" onClick={toggleAMPM} className={`px-5 py-2 rounded-xl text-xs font-black uppercase transition-all ${timeParts.ampm === 'PM' ? `${theme.primary} text-white` : `bg-white/10 opacity-60`}`}>{timeParts.ampm}</button>
                         </div>
                     )}
-                </div>
+                </div>  
 
                 {/* 2. THE HUB: CALORIES & MACROS */}
-                <div className={`p-8 rounded-[3rem] ${theme.inputBg} shadow-inner space-y-12 relative overflow-hidden`}>
+                <div className={`p-5 sm:p-8 rounded-[2rem] sm:rounded-[3rem] ${theme.inputBg} shadow-inner space-y-8 sm:space-y-12 relative overflow-hidden`}>
                     
-                    <div className="relative flex flex-col items-center justify-center py-6">
-                        <svg className="absolute w-64 h-64 -rotate-90 pointer-events-none" viewBox="0 0 100 100">
+                    <div 
+                        className="relative flex flex-col items-center justify-center py-4 sm:py-6"
+                        ref={calHubRef}
+                    >
+                        <svg className="absolute w-48 h-48 sm:w-64 sm:h-64 -rotate-90 pointer-events-none" viewBox="0 0 100 100">
                             <circle cx="50" cy="50" r="42" fill="none" className="stroke-black/5" strokeWidth="1" />
                             <circle cx="50" cy="50" r="42" fill="none" className="stroke-emerald-500 transition-all duration-1000" strokeWidth="6" 
                                 strokeDasharray={`${macroPercentages.protein * 2.64} 264`} strokeLinecap="round" />
@@ -179,16 +259,35 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                                 strokeDashoffset={`-${(macroPercentages.protein + macroPercentages.carbs) * 2.64}`} strokeLinecap="round" />
                         </svg>
 
-                        <div className="relative z-10 text-center">
+                        <div ref={caloriesRef} className="relative z-10 text-center">
+                            {showScrollHint && (
+                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-30 animate-pulse pointer-events-none">
+                                    <ChevronUp size={12} strokeWidth={2.5} />
+                                    <ChevronDown size={12} strokeWidth={2.5} />
+                                </div>
+                            )}
                             <input
+                                ref={caloriesInputRef}
                                 type="number"
                                 placeholder="0"
-                                className="no-native-spinners bg-transparent font-black text-7xl outline-none text-center tabular-nums w-44"
+                                className={`no-native-spinners bg-transparent font-black text-5xl sm:text-7xl outline-none text-center tabular-nums w-36 sm:w-44 border-b-2 pb-1 transition-colors cursor-ns-resize ${errors.calories ? 'border-rose-500' : 'border-transparent'}`}
                                 style={{ color: 'inherit', WebkitAppearance: 'none', margin: 0, MozAppearance: 'textfield' }}
                                 value={formData.calories}
-                                onChange={e => setFormData({...formData, calories: e.target.value})}
+                                onChange={e => { 
+                                    const newCals = e.target.value;
+                                    setFormData({...formData, calories: newCals}); 
+                                    if (errors.calories && Number(newCals) > 0) setErrors(prev => ({...prev, calories: null})); 
+                                }}
+                                onTouchStart={handleCaloriesTouchStart}
+                                onTouchMove={handleCaloriesTouchMove}
+                                onTouchEnd={handleCaloriesTouchEnd}
+                                onFocus={() => setShowScrollHint(false)}
                             />
                             <div className="text-[10px] font-black opacity-30 uppercase tracking-[0.4em] mt-1">Calories Total</div>
+                            {!errors.calories && showScrollHint && (
+                                <p className="text-xs font-bold mt-2 opacity-30 animate-pulse">Scroll or swipe to adjust</p>
+                            )}
+                            {errors.calories && <p className="text-rose-500 text-xs font-bold mt-2 animate-in fade-in slide-in-from-top-1 duration-200">{errors.calories}</p>}
                         </div>
                     </div>
 
@@ -221,31 +320,31 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                 </div>
 
                 {/* 3. TYPE & FEELING */}
-                <div className="space-y-10 px-2">
+                <div className="space-y-6 sm:space-y-10 px-1 sm:px-2">
                     <div className="grid grid-cols-4 gap-2">
                         {[
-                            { id: 'Breakfast', icon: Coffee, color: 'bg-amber-400' },
-                            { id: 'Lunch', icon: Sun, color: 'bg-orange-500' },
-                            { id: 'Dinner', icon: Moon, color: 'bg-indigo-600' },
-                            { id: 'Snack', icon: Apple, color: 'bg-rose-500' }
+                            { id: 'Breakfast', icon: '/breakfast.svg', color: 'bg-amber-400' },
+                            { id: 'Lunch', icon: '/lunch.svg', color: 'bg-orange-500' },
+                            { id: 'Dinner', icon: '/dinner.svg', color: 'bg-indigo-600' },
+                            { id: 'Snack', icon: '/snack.svg', color: 'bg-rose-500' }
                         ].map(t => (
                             <button 
                                 key={t.id} 
                                 type="button" 
                                 onClick={() => setFormData({...formData, type: t.id})} 
-                                className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex flex-col items-center gap-2 border-2 ${
+                                className={`py-3 sm:py-4 rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all flex flex-col items-center gap-1.5 sm:gap-2 border-2 ${
                                     formData.type === t.id 
                                     ? `${t.color} text-white border-transparent shadow-lg scale-105` 
                                     : `${theme.inputBg} border-transparent opacity-40 ${theme.textMain} hover:opacity-100`
                                 }`}
                             >
-                                <t.icon size={20} />
+                                <img src={t.icon} alt={t.id} className="w-5 h-5" />
                                 {t.id}
                             </button>
                         ))}
                     </div>
 
-                    <div className={`p-8 rounded-[3rem] ${theme.card} space-y-8 shadow-sm`}>
+                    <div className={`p-5 sm:p-8 rounded-[2rem] sm:rounded-[3rem] ${theme.card} space-y-6 sm:space-y-8 shadow-sm`}>
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 px-2">
                             <h4 className={`text-sm font-black uppercase tracking-widest opacity-40`}>Satisfaction</h4>
                             <button 
@@ -257,25 +356,25 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3">
-                            {[
-                                { id: 'great', label: 'Great', color: 'bg-emerald-500' },
-                                { id: 'good', label: 'Good', color: 'bg-blue-500' },
-                                { id: 'sick', label: 'Sick', color: 'bg-rose-500' }
-                            ].map(f => (
-                                <button 
-                                    key={f.id} 
-                                    type="button" 
-                                    onClick={() => setFormData({...formData, feeling: f.id})} 
-                                    className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
-                                        formData.feeling === f.id
-                                        ? `${f.color} text-white border-transparent scale-110 shadow-xl` 
-                                        : `${theme.inputBg} border-transparent opacity-40 hover:opacity-100`
-                                    }`}
-                                >
-                                    {f.label}
-                                </button>
-                            ))}
+                        <div className="grid grid-cols-4 gap-2">
+                            {FEELING_LIST.map(f => {
+                                const isSelected = normalizeFeeling(formData.feeling) === f.id;
+                                return (
+                                    <button 
+                                        key={f.id} 
+                                        type="button" 
+                                        onClick={() => setFormData({...formData, feeling: f.id})} 
+                                        className={`py-3 px-1 rounded-2xl flex flex-col items-center gap-2 transition-all border-2 ${
+                                            isSelected
+                                            ? `${f.color} text-white border-transparent scale-105 shadow-xl` 
+                                            : `${theme.inputBg} border-transparent opacity-40 hover:opacity-100`
+                                        }`}
+                                    >
+                                        <img src={f.icon} alt={f.shortLabel} className={`w-7 h-7 ${isSelected && !f.isIllustration ? 'brightness-0 invert' : ''}`} />
+                                        <span className="text-[9px] font-black uppercase tracking-widest">{f.shortLabel}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -284,13 +383,13 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                 <div className="space-y-6">
                     <textarea 
                         placeholder="Add notes..." 
-                        className={`w-full p-6 bg-black/5 rounded-[2rem] text-sm font-handwritten outline-none min-h-[100px] ${theme.textMain} placeholder:opacity-20 border border-transparent focus:border-black/5 transition-all shadow-inner`} 
+                        className={`w-full p-4 sm:p-6 bg-black/5 rounded-[1.5rem] sm:rounded-[2rem] text-sm font-handwritten outline-none min-h-[80px] sm:min-h-[100px] ${theme.textMain} placeholder:opacity-20 border border-transparent focus:border-black/5 transition-all shadow-inner resize-none`} 
                         value={formData.note} 
                         onChange={e => setFormData({...formData, note: e.target.value})} 
                     />
 
                     {/* Tags */}
-                    <div className={`p-5 rounded-[2rem] ${theme.inputBg} shadow-inner space-y-3`}>
+                    <div className={`p-4 sm:p-5 rounded-[1.5rem] sm:rounded-[2rem] ${theme.inputBg} shadow-inner space-y-3`}>
                         <div className="flex items-center gap-2 mb-1">
                             <Tag size={14} className="opacity-40" />
                             <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Tags</span>
@@ -360,7 +459,7 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
 
                     <button 
                         type="submit" 
-                        className={`w-full py-5 rounded-full ${theme.primary} text-white font-black text-xl shadow-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.2em]`}
+                        className={`w-full py-4 sm:py-5 rounded-full ${theme.primary} text-white font-black text-lg sm:text-xl shadow-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.15em] sm:tracking-[0.2em]`}
                     >
                         {editingId ? "Update Meal" : "Save Entry"}
                     </button>

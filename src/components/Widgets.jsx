@@ -1,21 +1,24 @@
-import React, { useMemo } from 'react';
-import { Plus, Coffee, Sun, Moon, Apple, BarChart3, Target, Flame } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Plus, BarChart3, Target, Flame, TrendingDown } from 'lucide-react';
+import { FEELINGS, getFeeling } from '../utils/feelings';
 
-export const ProgressRing = ({ current, target, label, unit, color, theme, size = 120 }) => {
+export const ProgressRing = ({ current, target, label, unit, color, theme, size }) => {
+  // Default responsive sizes: 100px on mobile, 120px on larger screens
+  const responsiveSize = size || 100;
   const percentage = Math.min((current / target) * 100, 100) || 0;
   const strokeWidth = 10;
-  const radius = (size - strokeWidth) / 2;
+  const radius = (responsiveSize - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="relative" style={{ width: size, height: size }}>
+      <div className="relative" style={{ width: responsiveSize, height: responsiveSize }}>
         {/* Background Circle */}
         <svg className="w-full h-full transform -rotate-90">
           <circle
-            cx={size / 2}
-            cy={size / 2}
+            cx={responsiveSize / 2}
+            cy={responsiveSize / 2}
             r={radius}
             stroke="currentColor"
             strokeWidth={strokeWidth}
@@ -24,8 +27,8 @@ export const ProgressRing = ({ current, target, label, unit, color, theme, size 
           />
           {/* Progress Circle */}
           <circle
-            cx={size / 2}
-            cy={size / 2}
+            cx={responsiveSize / 2}
+            cy={responsiveSize / 2}
             r={radius}
             stroke="currentColor"
             strokeWidth={strokeWidth}
@@ -177,14 +180,120 @@ export const WaterBottle = ({ currentOz, goalOz, onAdd }) => {
   );
 };
 
+export const TriggerFinder = ({ topTrigger, activeExperiment, experimentResults, theme, onStartExperiment, onStopExperiment }) => {
+  if (!topTrigger && !activeExperiment) return null;
+
+  return (
+    <Widget 
+      title="Pattern Insights" 
+      icon={BarChart3} 
+      subtitle={activeExperiment ? "Testing a trigger" : "Detected pattern"} 
+      theme={theme}
+      action={
+        activeExperiment && (
+          <button 
+            onClick={onStopExperiment}
+            className={`text-[10px] font-bold px-3 py-1 rounded-full ${theme.inputBg} opacity-50 hover:opacity-100 transition-all`}
+          >
+            Complete
+          </button>
+        )
+      }
+    >
+      {activeExperiment ? (
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <p className={`text-xs font-bold ${theme.textMain} opacity-50 uppercase tracking-widest mb-1`}>{activeExperiment.categoryLabel}</p>
+              <p className={`text-sm font-black ${theme.textMain} leading-tight`}>Avoiding: {activeExperiment.trigger}</p>
+            </div>
+            <div className="text-right">
+              <p className={`text-2xl font-black ${theme.primaryText}`}>{experimentResults?.complianceRate || 0}%</p>
+              <p className={`text-[9px] font-bold ${theme.textMain} opacity-40 uppercase tracking-widest`}>Success Rate</p>
+            </div>
+          </div>
+          
+          <div className={`p-3 rounded-xl ${theme.inputBg}`}>
+            <div className="flex justify-between items-center mb-2">
+              <span className={`text-[10px] font-bold ${theme.textMain} opacity-60`}>Progress</span>
+              <span className={`text-[10px] font-bold ${theme.textMain}`}>Day {experimentResults?.daysElapsed || 0} of {activeExperiment.durationDays}</span>
+            </div>
+            <div className={`h-2 rounded-full bg-black/10 overflow-hidden`}>
+              <div 
+                className={`h-full ${theme.primary} transition-all duration-700`}
+                style={{ width: `${Math.min(100, ((experimentResults?.daysElapsed || 0) / activeExperiment.durationDays) * 100)}%` }}
+              />
+            </div>
+          </div>
+
+          {experimentResults?.improvementText && (
+            <div className={`p-3 rounded-xl ${experimentResults.improvement > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'}`}>
+              <p className={`text-xs font-bold ${experimentResults.improvement > 0 ? 'text-emerald-700' : 'text-amber-700'} leading-tight`}>
+                {experimentResults.improvementText}
+              </p>
+            </div>
+          )}
+
+          {experimentResults?.sampleSizeWarning && (
+            <p className={`text-[10px] ${theme.textMain} opacity-50 italic text-center`}>
+              ⚠️ {experimentResults.sampleSizeWarning}
+            </p>
+          )}
+
+          <p className={`text-[10px] ${theme.textMain} opacity-60 leading-tight`}>
+            {experimentResults?.totalMeals || 0} meals logged · {experimentResults?.compliantMealsCount || 0} avoided trigger · {experimentResults?.compliantBadRate || 0}% felt unwell
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className={`p-2 rounded-xl ${theme.inputBg} flex-shrink-0`}>
+              <img src={topTrigger.rate >= 60 ? FEELINGS.sick.icon : FEELINGS.okay.icon} alt="" className="w-8 h-8" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${theme.inputBg} ${theme.textMain} opacity-60 uppercase tracking-widest`}>
+                  {topTrigger.categoryLabel}
+                </span>
+                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${topTrigger.confidence >= 80 ? 'bg-emerald-100 text-emerald-700' : topTrigger.confidence >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                  {topTrigger.confidence}% confidence
+                </span>
+              </div>
+              <p className={`text-sm font-black ${theme.textMain} mb-1.5 leading-tight`}>
+                {topTrigger.name.charAt(0).toUpperCase() + topTrigger.name.slice(1)}
+              </p>
+              <p className={`text-xs ${theme.textMain} opacity-70 leading-snug`}>
+                {topTrigger.description}
+              </p>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => onStartExperiment(topTrigger)}
+            className={`w-full py-3 rounded-xl ${theme.primary} text-white text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-md`}
+          >
+            Test This Pattern (7 Days)
+          </button>
+          
+          <p className={`text-[10px] ${theme.textMain} opacity-40 text-center italic`}>
+            We'll track if avoiding this helps you feel better
+          </p>
+        </div>
+      )}
+    </Widget>
+  );
+};
+
 export const WellnessTrends = ({ entries, theme }) => {
+  const [activeBar, setActiveBar] = useState(null);
+
   const stats = useMemo(() => {
     const categories = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
     const data = { 
-      Breakfast: { total: 0, issues: 0 },
-      Lunch: { total: 0, issues: 0 },
-      Dinner: { total: 0, issues: 0 },
-      Snack: { total: 0, issues: 0 }
+      Breakfast: { total: 0, issues: 0, feelings: { good: 0, okay: 0, sick: 0, bloated: 0 }, calories: 0 },
+      Lunch: { total: 0, issues: 0, feelings: { good: 0, okay: 0, sick: 0, bloated: 0 }, calories: 0 },
+      Dinner: { total: 0, issues: 0, feelings: { good: 0, okay: 0, sick: 0, bloated: 0 }, calories: 0 },
+      Snack: { total: 0, issues: 0, feelings: { good: 0, okay: 0, sick: 0, bloated: 0 }, calories: 0 }
     };
     
     let totalIssues = 0;
@@ -193,62 +302,83 @@ export const WellnessTrends = ({ entries, theme }) => {
       const type = categories.find(c => c.toLowerCase() === (entry.type || '').toLowerCase());
       if (type) {
         data[type].total++;
-        if (!entry.finished || entry.feeling === 'sick' || entry.feeling === 'bloated') {
+        data[type].calories += (entry.calories || 0);
+        const feeling = entry.feeling || 'good';
+        if (data[type].feelings[feeling] !== undefined) data[type].feelings[feeling]++;
+        if (!entry.finished || feeling === 'sick' || feeling === 'bloated') {
           data[type].issues++;
           totalIssues++;
         }
       }
     });
 
-    const maxVal = Math.max(...Object.values(data).map(d => d.total), 4); 
+    const maxVal = Math.max(...Object.values(data).map(d => d.total), 4);
     
     return { data, maxVal, totalIssues, categories };
   }, [entries]);
 
   return (
-    <Widget title="Habit & Patterns" icon={BarChart3} subtitle="Consistency Tracker" theme={theme}>
-      <div className="flex items-end justify-between gap-3 h-36 pt-4 px-2">
-        {stats.categories.map((cat) => {
-          const { total, issues } = stats.data[cat];
+    <Widget title="Wellness Trends" icon={BarChart3} subtitle="How you're feeling" theme={theme}>
+      <div className="flex items-end justify-between gap-4 h-32 relative">
+        {stats.categories.map(cat => {
+          const { total, issues, feelings, calories } = stats.data[cat];
           const totalHeight = (total / stats.maxVal) * 100;
-          const issueHeightRelative = total > 0 ? (issues / total) * 100 : 0;
+          const issueHeight = total > 0 ? (issues / total) * 100 : 0;
+          const isActive = activeBar === cat;
           
           return (
-            <div key={cat} className="flex-1 flex flex-col items-center gap-2 group relative h-full justify-end">
-               <div className={`relative w-full flex items-end justify-center rounded-xl overflow-hidden ${theme.inputBg} shadow-inner theme-transition`} style={{ height: '100%' }}>
-                  <div className="absolute bottom-0 w-full bg-transparent flex items-end justify-center h-full">
-                      <div 
-                        className={`w-full ${theme.secondary.replace('bg-', 'bg-')} absolute bottom-0 transition-all duration-700 ease-out rounded-t-sm opacity-50`}
-                        style={{ height: `${totalHeight}%` }}
-                      >
-                          <div 
-                            className="w-full bg-rose-500 absolute bottom-0 transition-all duration-700 ease-out opacity-80"
-                            style={{ height: `${issueHeightRelative}%` }}
-                          />
-                      </div>
+            <div key={cat} className="flex-1 flex flex-col items-center gap-2 relative">
+              {/* Tooltip */}
+              {isActive && total > 0 && (
+                <div className={`absolute bottom-full mb-2 left-1/2 -translate-x-1/2 ${theme.card} rounded-xl shadow-2xl p-3 z-50 min-w-[140px] border ${theme.border} pointer-events-none`}>
+                  <p className={`text-xs font-black ${theme.textMain} mb-1.5`}>{cat}</p>
+                  <div className="space-y-1">
+                    <p className={`text-[10px] ${theme.textMain} opacity-70`}><span className="font-bold">{total}</span> meals · <span className="font-bold">{calories}</span> kcal</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {Object.entries(feelings).map(([key, count]) => {
+                        if (count === 0) return null;
+                        const f = FEELINGS[key];
+                        return <span key={key} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${f.softColor} flex items-center gap-1`}><img src={f.icon} alt={f.shortLabel} className="w-3 h-3" /> {count}</span>;
+                      })}
+                    </div>
+                    {issues > 0 && <p className="text-[9px] font-bold text-rose-500 mt-1">{issues} issue{issues > 1 ? 's' : ''} flagged</p>}
                   </div>
-                  
-                  {total > 0 && (
-                    <span 
-                        className={`absolute w-full text-center text-[10px] font-bold ${theme.textMain} opacity-70 transition-all duration-700 theme-transition`}
-                        style={{ bottom: `${totalHeight + 5}%` }}
+                  <div className={`absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 ${theme.card} border-r border-b ${theme.border} -mt-1`}></div>
+                </div>
+              )}
+              <div 
+                className={`w-full relative rounded-xl overflow-hidden bg-black/5 h-full flex items-end cursor-pointer transition-all ${isActive ? 'ring-2 ring-offset-1 ring-black/10' : ''}`}
+                onClick={() => setActiveBar(isActive ? null : cat)}
+                onMouseEnter={() => setActiveBar(cat)}
+                onMouseLeave={() => setActiveBar(null)}
+              >
+                <div className="absolute bottom-0 w-full bg-transparent flex items-end justify-center h-full">
+                    <div 
+                      className={`w-full ${theme.secondary} absolute bottom-0 transition-all duration-700 ease-out rounded-t-sm ${isActive ? 'opacity-80' : 'opacity-50'}`}
+                      style={{ height: `${totalHeight}%` }}
                     >
-                      {total}
-                    </span>
-                  )}
-               </div>
-               
-               <div className="text-center">
-                 <span className={`text-[10px] font-bold uppercase tracking-wide block mb-1 ${theme.textMain} opacity-60 theme-transition`}>
-                   {cat}
-                 </span>
-                 <div className={`flex justify-center opacity-40 ${theme.textMain} theme-transition`}>
-                    {cat === 'Breakfast' ? <Coffee size={12}/> : 
-                     cat === 'Lunch' ? <Sun size={12}/> : 
-                     cat === 'Dinner' ? <Moon size={12}/> : 
-                     <Apple size={12}/>}
-                 </div>
-               </div>
+                        <div 
+                          className="w-full bg-rose-500 absolute bottom-0 transition-all duration-700 ease-out opacity-80"
+                          style={{ height: `${issueHeight}%` }}
+                        />
+                    </div>
+                </div>
+              </div>
+              <div className="text-center">
+                <span className={`text-[10px] font-bold uppercase tracking-wide block mb-0.5 ${theme.textMain} ${isActive ? 'opacity-100' : 'opacity-60'} theme-transition transition-opacity`}>
+                  {cat}
+                </span>
+                <div className={`flex justify-center ${isActive ? 'opacity-70' : 'opacity-40'} ${theme.textMain} theme-transition transition-opacity`}>
+                   <img 
+                      src={cat === 'Breakfast' ? '/breakfast.svg' : 
+                           cat === 'Lunch' ? '/lunch.svg' : 
+                           cat === 'Dinner' ? '/dinner.svg' : 
+                           '/snack.svg'} 
+                      alt={cat}
+                      className="w-3 h-3"
+                   />
+                </div>
+              </div>
             </div>
           );
         })}

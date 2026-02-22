@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Home, Calendar as CalendarIcon, Settings, Leaf } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, Settings, Leaf, BarChart3 } from 'lucide-react';
 import { getTier } from '../utils/gardenTiers';
 
 // Builds a smooth closed SVG path from polar points using Catmull-Rom → cubic bezier
@@ -194,6 +194,7 @@ export function MobileBottomNav({
   theme, dailyStreak,
   setIsCalendarOpen, setIsSettingsOpen,
   setIsStreakOpen, setIsFabMenuOpen,
+  setIsTrendsOpen,
   activeTab, setActiveTab,
 }) {
   const tier = getTier(dailyStreak);
@@ -213,18 +214,13 @@ export function MobileBottomNav({
           <span className="text-[8px] font-black uppercase tracking-wider">Home</span>
         </button>
 
-        {/* Garden / Streak */}
+        {/* Trends */}
         <button 
-          onClick={() => setIsStreakOpen(true)}
+          onClick={() => setIsTrendsOpen(true)}
           className={`flex flex-col items-center gap-0.5 py-2 px-3 rounded-2xl transition-all active:scale-90 ${theme.textMain} opacity-35 hover:opacity-100`}
         >
-          <div className="relative">
-            <Leaf size={22} strokeWidth={1.5} className={tier.color} />
-            {dailyStreak > 0 && (
-              <span className={`absolute -top-1.5 -right-2.5 text-[8px] font-black bg-white rounded-full w-4 h-4 flex items-center justify-center shadow-sm ${tier.color}`}>{dailyStreak}</span>
-            )}
-          </div>
-          <span className="text-[8px] font-black uppercase tracking-wider">Garden</span>
+          <BarChart3 size={22} strokeWidth={1.5} />
+          <span className="text-[8px] font-black uppercase tracking-wider">Trends</span>
         </button>
 
         {/* Center Add Button — Glassy Water Blob */}

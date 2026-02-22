@@ -3,7 +3,7 @@ import { X, Leaf, ChevronLeft, ChevronUp, ChevronDown, Flame, ShieldCheck, Mail,
 
 // Reusable Modal Component
 export const Modal = ({ isOpen, onClose, title, children, theme, maxWidth = 'max-w-md' }) => {
-  const modalClass = `${theme.card} rounded-[3rem] shadow-2xl transform transition-all scale-100 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col ${theme.textMain} theme-transition overflow-hidden`;
+  const modalClass = `${theme.card} rounded-[2rem] sm:rounded-[3rem] shadow-2xl transform transition-all scale-100 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col ${theme.textMain} theme-transition overflow-hidden`;
   const [scrollInfo, setScrollInfo] = useState({ top: false, bottom: false });
   const scrollRef = React.useRef(null);
 
@@ -20,26 +20,29 @@ export const Modal = ({ isOpen, onClose, title, children, theme, maxWidth = 'max
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
+      document.documentElement.style.overflow = 'hidden';
       // Initial check after mount
       setTimeout(handleScroll, 100);
     } else {
       document.body.style.overflow = 'unset';
       document.body.style.touchAction = 'auto';
+      document.documentElement.style.overflow = 'unset';
     }
     return () => {
       document.body.style.overflow = 'unset';
       document.body.style.touchAction = 'auto';
+      document.documentElement.style.overflow = 'unset';
     };
   }, [isOpen]);
 
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 transition-opacity backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 touch-none">
+      <div className="absolute inset-0 bg-black/80 transition-opacity backdrop-blur-sm" onClick={onClose} onTouchMove={e => e.preventDefault()} />
       <div className={`relative w-full ${maxWidth} ${modalClass}`}>
         
         {/* Header with Texture */}
-        <div className={`relative flex justify-between items-center p-6 shadow-sm z-30 rounded-t-[3rem] theme-transition overflow-hidden`}>
+        <div className={`relative flex justify-between items-center p-4 sm:p-6 shadow-sm z-30 rounded-t-[2rem] sm:rounded-t-[3rem] theme-transition overflow-hidden`}>
           {/* Noise Texture Overlay */}
           <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
           <div className={`absolute inset-0 bg-white/5 backdrop-blur-xl`}></div>
@@ -58,7 +61,7 @@ export const Modal = ({ isOpen, onClose, title, children, theme, maxWidth = 'max
             <div 
                 ref={scrollRef}
                 onScroll={handleScroll}
-                className="p-6 overflow-y-auto no-scrollbar flex-1 relative z-10"
+                className="p-4 sm:p-6 overflow-y-auto no-scrollbar flex-1 relative z-10 overscroll-contain touch-pan-y"
             >
                 {children}
             </div>
@@ -73,7 +76,7 @@ export const Modal = ({ isOpen, onClose, title, children, theme, maxWidth = 'max
 };
 
 // Full-Screen Welcome Component (Gooey Slime & Fixed Auth)
-export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPassword, currentThemeId, onThemeChange, dailyTargets, onTargetsChange, allThemes }) => {
+export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPassword, currentThemeId, onThemeChange, dailyTargets, onTargetsChange, allThemes, setShowWelcome }) => {
     const [step, setStep] = useState(0); 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -141,7 +144,9 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
         localStorage.setItem('nourish-user-name', capitalizedName);
         localStorage.setItem('nourish-device-only', 'true');
-        onSave(capitalizedName, ''); 
+        // In device-only mode there is no Firebase user, so onSave (handleSaveProfile)
+        // would bail out. Close the welcome screen directly instead.
+        if (setShowWelcome) setShowWelcome(false);
     };
 
     const handleAuthAction = async (e) => {
@@ -158,7 +163,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
     };
 
     return (
-        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 md:p-8 ${theme.bg} overflow-hidden transition-colors duration-1000`}>
+        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center p-3 sm:p-4 md:p-8 ${theme.bg} overflow-hidden transition-colors duration-1000`}>
             
             {/* SVG Gooey Filter Definition */}
             <svg className="hidden">
@@ -175,10 +180,10 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
             {step === 0 && (
                 <div className={`relative z-10 flex flex-col items-center justify-center h-full w-full transition-all duration-1000 ${isIntroExiting ? 'opacity-0 scale-110 blur-xl' : 'opacity-100'}`}>
                     
-                    <div className="relative flex items-center justify-center w-full max-w-sm h-80">
+                    <div className="relative flex items-center justify-center w-full max-w-sm h-48 sm:h-64 md:h-80">
                         <button
                             onClick={handleIntroClick}
-                            className="relative group outline-none cursor-pointer flex items-center justify-center w-64 h-64 md:w-80 md:h-80 gooey-container"
+                            className="relative group outline-none cursor-pointer flex items-center justify-center w-40 h-40 sm:w-56 sm:h-56 md:w-80 md:h-80 gooey-container"
                         >
                             <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-2xl overflow-visible">
                                 <defs>
@@ -236,18 +241,18 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                         </div>
                     </div>
 
-                    <div className="mt-16 text-center">
-                        <h1 className={`text-6xl md:text-8xl font-black ${theme.primaryText} tracking-[0.2em] uppercase flex justify-center gap-4`}>
+                    <div className="mt-8 sm:mt-12 md:mt-16 text-center">
+                        <h1 className={`text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black ${theme.primaryText} tracking-[0.1em] sm:tracking-[0.15em] md:tracking-[0.2em] uppercase flex justify-center gap-1.5 sm:gap-2.5 md:gap-4`}>
                             {"NOURISH".split("").map((char, i) => (
                                 <span key={i} className="animate-in fade-in slide-in-from-bottom-8" style={{ animationDelay: `${i * 100}ms` }}>{char}</span>
                             ))}
                         </h1>
-                        <p className={`mt-6 text-[10px] font-bold tracking-[1em] uppercase ${theme.textMain} opacity-20`}>
+                        <p className={`mt-3 sm:mt-4 md:mt-6 text-[8px] sm:text-[9px] md:text-[10px] font-bold tracking-[0.5em] sm:tracking-[0.7em] md:tracking-[1em] uppercase ${theme.textMain} opacity-20`}>
                             Mindful Nutrition
                         </p>
                     </div>
 
-                    <div className="absolute bottom-16 w-full flex justify-center px-8">
+                    <div className="absolute bottom-8 sm:bottom-12 md:bottom-16 w-full flex justify-center px-4 sm:px-6 md:px-8">
                         <button 
                             onClick={handleIntroClick}
                             className={`transition-all duration-1000 ease-out transform ${showIdleHint && !isIntroExiting ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'} group cursor-pointer w-full max-w-xs`}
@@ -263,7 +268,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
             )}
 
             {step > 0 && (
-                <div className={`relative w-full max-w-2xl ${theme.card} rounded-[3rem] shadow-2xl p-8 md:p-12 ${theme.textMain} theme-transition overflow-hidden animate-in zoom-in-95 duration-700`}>
+                <div className={`relative w-full max-w-2xl ${theme.card} rounded-[2rem] sm:rounded-[2.5rem] md:rounded-[3rem] shadow-2xl p-5 sm:p-8 md:p-12 ${theme.textMain} theme-transition overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-700`}>
                     
                     <div className="absolute top-0 left-0 right-0 h-1.5 flex gap-1 px-1 pt-1">
                         {[1, 2, 3, 4].map(i => (
@@ -273,11 +278,11 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
 
                     {step === 1 && (
                         <div className="text-center animate-in slide-in-from-bottom-4 duration-500">
-                            <h2 className={`text-4xl font-black ${theme.primaryText} mb-4 tracking-tight`}>Welcome</h2>
-                            <p className="text-lg opacity-60 mb-8 max-w-sm mx-auto">Let's start with your name so we can personalize your experience.</p>
-                            <div className="space-y-6 max-w-sm mx-auto">
-                                <input type="text" placeholder="Your Name..." className={`w-full p-6 ${theme.inputBg} rounded-3xl font-bold outline-none text-2xl border-2 border-transparent focus:border-current transition-all text-center ${theme.textMain} theme-transition`} value={name} onChange={e => setName(e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1))} autoFocus onKeyDown={e => e.key === 'Enter' && name.trim() && handleNext()} />
-                                <button onClick={handleNext} disabled={!name.trim()} className={`w-full py-5 rounded-2xl ${theme.primary} text-white font-bold text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2`} > Continue <ArrowRight size={20} /> </button>
+                            <h2 className={`text-2xl sm:text-3xl md:text-4xl font-black ${theme.primaryText} mb-2 sm:mb-4 tracking-tight`}>Welcome</h2>
+                            <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8 max-w-sm mx-auto">Let's start with your name so we can personalize your experience.</p>
+                            <div className="space-y-4 sm:space-y-6 max-w-sm mx-auto">
+                                <input type="text" placeholder="Your Name..." className={`w-full p-4 sm:p-5 md:p-6 ${theme.inputBg} rounded-2xl sm:rounded-3xl font-bold outline-none text-xl sm:text-2xl border-2 border-transparent focus:border-current transition-all text-center ${theme.textMain} theme-transition`} value={name} onChange={e => setName(e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1))} autoFocus onKeyDown={e => e.key === 'Enter' && name.trim() && handleNext()} />
+                                <button onClick={handleNext} disabled={!name.trim()} className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2`} > Continue <ArrowRight size={20} /> </button>
                                 
                                 <button 
                                     onClick={() => { setAuthMode('login'); setStep(2); }}
@@ -291,21 +296,21 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
 
                     {step === 2 && (
                         <div className="text-center animate-in slide-in-from-right-8 duration-500">
-                            <h2 className={`text-3xl font-black ${theme.textMain} mb-4 tracking-tight`}>Cloud or Local?</h2>
-                            <p className="text-lg opacity-60 mb-8 max-w-sm mx-auto text-balance">Choose how you'd like to save your nutrition data.</p>
+                            <h2 className={`text-2xl sm:text-3xl font-black ${theme.textMain} mb-2 sm:mb-4 tracking-tight`}>Cloud or Local?</h2>
+                            <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8 max-w-sm mx-auto text-balance">Choose how you'd like to save your nutrition data.</p>
                             
                             {!isEmailForm ? (
                                 <div className="space-y-4 max-w-md mx-auto">
-                                    <button onClick={handleGoogleSignUp} className="w-full py-4 bg-white border-2 border-slate-100 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-slate-50 hover:scale-105 active:scale-95 transition-all shadow-sm">
+                                    <button onClick={handleGoogleSignUp} className="w-full py-3 sm:py-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-3 hover:bg-slate-50 hover:scale-105 active:scale-95 transition-all shadow-sm">
                                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" /> Continue with Google
                                     </button>
                                     
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button onClick={() => { setAuthMode('login'); setIsEmailForm(true); }} className={`py-4 ${theme.inputBg} rounded-2xl font-bold flex items-center justify-center gap-3 hover:brightness-95 hover:scale-105 active:scale-95 transition-all text-sm`}>
-                                            <LogIn size={18} /> Sign In
+                                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                                        <button onClick={() => { setAuthMode('login'); setIsEmailForm(true); }} className={`py-3 sm:py-4 ${theme.inputBg} rounded-2xl font-bold flex items-center justify-center gap-2 sm:gap-3 hover:brightness-95 hover:scale-105 active:scale-95 transition-all text-xs sm:text-sm`}>
+                                            <LogIn size={16} /> Sign In
                                         </button>
-                                        <button onClick={() => { if (!name.trim()) { setStep(1); } else { setAuthMode('signup'); setIsEmailForm(true); } }} className={`py-4 ${theme.inputBg} rounded-2xl font-bold flex items-center justify-center gap-3 hover:brightness-95 hover:scale-105 active:scale-95 transition-all text-sm`}>
-                                            <UserPlus size={18} /> Sign Up
+                                        <button onClick={() => { if (!name.trim()) { setStep(1); } else { setAuthMode('signup'); setIsEmailForm(true); } }} className={`py-3 sm:py-4 ${theme.inputBg} rounded-2xl font-bold flex items-center justify-center gap-2 sm:gap-3 hover:brightness-95 hover:scale-105 active:scale-95 transition-all text-xs sm:text-sm`}>
+                                            <UserPlus size={16} /> Sign Up
                                         </button>
                                     </div>
 
@@ -314,9 +319,10 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                                         <span className="text-[10px] font-bold opacity-30 uppercase">Or stay private</span>
                                         <div className="flex-1 h-px bg-black/5"></div>
                                     </div>
-                                                                    <button onClick={handleSkipSync} className={`w-full py-4 rounded-2xl border-2 border-dashed ${theme.border} font-bold opacity-60 hover:opacity-100 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}>
-                                                                        <Smartphone size={18} /> Device Only (Skip Sync)
-                                                                    </button>                                </div>
+                                    <button onClick={handleSkipSync} className={`w-full py-3 sm:py-4 rounded-2xl border-2 border-dashed ${theme.border} font-bold text-xs sm:text-sm opacity-60 hover:opacity-100 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}>
+                                        <Smartphone size={16} /> Device Only (Skip Sync)
+                                    </button>
+                                </div>
                             ) : (
                                 <form onSubmit={handleAuthAction} className="space-y-4 max-w-sm mx-auto text-left animate-in fade-in duration-300">
                                     <div className={`flex gap-2 ${theme.inputBg} p-1 rounded-xl shadow-inner mb-4`}>
@@ -346,32 +352,32 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
 
                     {step === 3 && (
                         <div className="text-center animate-in slide-in-from-right-8 duration-500">
-                            <h2 className={`text-3xl font-black ${theme.textMain} mb-4 tracking-tight`}>Pick your vibe</h2>
-                            <p className="text-lg opacity-60 mb-8">Select a theme that matches your style.</p>
-                            <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+                            <h2 className={`text-2xl sm:text-3xl font-black ${theme.textMain} mb-2 sm:mb-4 tracking-tight`}>Pick your vibe</h2>
+                            <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8">Select a theme that matches your style.</p>
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-sm mx-auto">
                                 {Object.keys(allThemes).map(t => (
-                                    <button key={t} onClick={() => onThemeChange(t)} className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-2 relative ${currentThemeId === t ? `${theme.primary} text-white scale-105 shadow-xl border-transparent` : `${theme.inputBg} border-transparent hover:border-current opacity-70`}`} >
-                                        <div className={`p-2 rounded-xl ${currentThemeId === t ? 'bg-white/20' : 'bg-black/5'}`}> {React.createElement(allThemes[t].icon, { size: 24 })} </div>
-                                        <span className="font-bold">{t}</span>
-                                        {currentThemeId === t && <Check size={16} className="absolute top-3 right-3" />}
+                                    <button key={t} onClick={() => onThemeChange(t)} className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-2 transition-all flex flex-col items-center gap-2 relative ${currentThemeId === t ? `${theme.primary} text-white scale-105 shadow-xl border-transparent` : `${theme.inputBg} border-transparent hover:border-current opacity-70`}`} >
+                                        <div className={`p-2 rounded-xl ${currentThemeId === t ? 'bg-white/20' : 'bg-black/5'}`}> {React.createElement(allThemes[t].icon, { size: 22 })} </div>
+                                        <span className="font-bold text-sm sm:text-base">{t}</span>
+                                        {currentThemeId === t && <Check size={14} className="absolute top-2 right-2 sm:top-3 sm:right-3" />}
                                     </button>
                                 ))}
                             </div>
-                            <button onClick={handleNext} className={`w-full py-5 rounded-2xl ${theme.primary} text-white font-bold text-xl shadow-xl mt-10 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}> Looks Great <ArrowRight size={20} /> </button>
+                            <button onClick={handleNext} className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl mt-6 sm:mt-10 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}> Looks Great <ArrowRight size={20} /> </button>
                         </div>
                     )}
 
                     {step === 4 && (
                         <div className="text-center animate-in slide-in-from-right-8 duration-500">
-                            <h2 className={`text-3xl font-black ${theme.textMain} mb-4 tracking-tight`}>Daily Goals</h2>
-                            <p className="text-lg opacity-60 mb-8">Set your baseline nutritional targets.</p>
-                            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-10">
-                                <div className={`p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[10px] font-bold uppercase opacity-40 block mb-1">Calories</label> <input type="number" className="bg-transparent w-full text-2xl font-black outline-none" value={dailyTargets.calories} onChange={e => onTargetsChange({...dailyTargets, calories: Number(e.target.value)})} /> </div>
-                                <div className={`p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[10px] font-bold uppercase opacity-40 block mb-1">Protein (g)</label> <input type="number" className="bg-transparent w-full text-2xl font-black outline-none text-green-600" value={dailyTargets.protein} onChange={e => onTargetsChange({...dailyTargets, protein: Number(e.target.value)})} /> </div>
-                                <div className={`p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[10px] font-bold uppercase opacity-40 block mb-1">Carbs (g)</label> <input type="number" className="bg-transparent w-full text-2xl font-black outline-none text-orange-600" value={dailyTargets.carbs} onChange={e => onTargetsChange({...dailyTargets, carbs: Number(e.target.value)})} /> </div>
-                                <div className={`p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[10px] font-bold uppercase opacity-40 block mb-1">Fats (g)</label> <input type="number" className="bg-transparent w-full text-2xl font-black outline-none text-blue-600" value={dailyTargets.fats} onChange={e => onTargetsChange({...dailyTargets, fats: Number(e.target.value)})} /> </div>
+                            <h2 className={`text-2xl sm:text-3xl font-black ${theme.textMain} mb-2 sm:mb-4 tracking-tight`}>Daily Goals</h2>
+                            <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8">Set your baseline nutritional targets.</p>
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-md mx-auto mb-6 sm:mb-10">
+                                <div className={`p-3 sm:p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[9px] sm:text-[10px] font-bold uppercase opacity-40 block mb-1">Calories</label> <input type="number" className="bg-transparent w-full text-xl sm:text-2xl font-black outline-none" value={dailyTargets.calories} onChange={e => onTargetsChange({...dailyTargets, calories: Number(e.target.value)})} /> </div>
+                                <div className={`p-3 sm:p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[9px] sm:text-[10px] font-bold uppercase opacity-40 block mb-1">Protein (g)</label> <input type="number" className="bg-transparent w-full text-xl sm:text-2xl font-black outline-none text-green-600" value={dailyTargets.protein} onChange={e => onTargetsChange({...dailyTargets, protein: Number(e.target.value)})} /> </div>
+                                <div className={`p-3 sm:p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[9px] sm:text-[10px] font-bold uppercase opacity-40 block mb-1">Carbs (g)</label> <input type="number" className="bg-transparent w-full text-xl sm:text-2xl font-black outline-none text-orange-600" value={dailyTargets.carbs} onChange={e => onTargetsChange({...dailyTargets, carbs: Number(e.target.value)})} /> </div>
+                                <div className={`p-3 sm:p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[9px] sm:text-[10px] font-bold uppercase opacity-40 block mb-1">Fats (g)</label> <input type="number" className="bg-transparent w-full text-xl sm:text-2xl font-black outline-none text-blue-600" value={dailyTargets.fats} onChange={e => onTargetsChange({...dailyTargets, fats: Number(e.target.value)})} /> </div>
                             </div>
-                            <button onClick={() => onSave(name, email)} className={`w-full py-5 rounded-2xl ${theme.primary} text-white font-bold text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}> Start My Journey <ArrowRight size={20} /> </button>
+                            <button onClick={() => onSave(name, email)} className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}> Start My Journey <ArrowRight size={20} /> </button>
                         </div>
                     )}
                 </div>

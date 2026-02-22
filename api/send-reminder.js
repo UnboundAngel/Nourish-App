@@ -50,26 +50,125 @@ export default async function handler(req, res) {
 
       const meals = entriesSnapshot.docs.map(doc => doc.data());
       const totalCalories = meals.reduce((sum, m) => sum + (m.calories || 0), 0);
+      const totalProtein = meals.reduce((sum, m) => sum + (m.protein || 0), 0);
+      const totalCarbs = meals.reduce((sum, m) => sum + (m.carbs || 0), 0);
+      const totalFats = meals.reduce((sum, m) => sum + (m.fats || 0), 0);
       const mealCount = meals.length;
 
+      // Feeling breakdown
+      const feelings = { good: 0, okay: 0, sick: 0, bloated: 0 };
+      meals.forEach(m => {
+        const f = m.feeling || 'good';
+        if (feelings[f] !== undefined) feelings[f]++;
+      });
+
+      // Macro goal insights
+      const targets = subData.dailyTargets || { calories: 2000, protein: 150, carbs: 250, fats: 65 };
+      const calPct = targets.calories > 0 ? Math.round((totalCalories / targets.calories) * 100) : 0;
+      const protPct = targets.protein > 0 ? Math.round((totalProtein / targets.protein) * 100) : 0;
+
+      let goalInsight = '';
+      if (mealCount === 0) {
+        goalInsight = "You haven't logged any meals today. Remember to track your nutrition!";
+      } else if (calPct >= 90 && calPct <= 110) {
+        goalInsight = `You hit your calorie goal perfectly at ${calPct}%! Great job staying on track.`;
+      } else if (calPct < 90) {
+        goalInsight = `You're at ${calPct}% of your calorie goal. Consider having another nutritious meal or snack.`;
+      } else {
+        goalInsight = `You went ${calPct - 100}% over your calorie goal today. No worries — balance it out tomorrow!`;
+      }
+
+      // Feeling insight
+      let feelingInsight = '';
+      const totalFeelings = Object.values(feelings).reduce((a, b) => a + b, 0);
+      if (totalFeelings > 0) {
+        const goodPct = Math.round((feelings.good / totalFeelings) * 100);
+        const issues = feelings.sick + feelings.bloated;
+        if (goodPct >= 80) {
+          feelingInsight = `You felt great after ${goodPct}% of your meals today — keep it up!`;
+        } else if (issues > 0) {
+          feelingInsight = `${issues} meal${issues > 1 ? 's' : ''} left you feeling unwell. Consider reviewing what you ate for patterns.`;
+        }
+      }
+
+      // Meal details list
+      const mealListHtml = meals.map(m => `
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-weight: 600;">${m.name || 'Unnamed'}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #f0f0f0; color: #666;">${m.type || 'Meal'}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-weight: 700;">${m.calories || 0} kcal</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #f0f0f0;">${m.feeling === 'sick' ? '🤢' : m.feeling === 'bloated' ? '😣' : m.feeling === 'okay' ? '😐' : '😊'}</td>
+        </tr>
+      `).join('');
+
       // 3. Send the email using Resend
-      // NOTE: To use a custom domain, verify it in your Resend dashboard at https://resend.com/domains
-      // For testing, using the Resend sandbox address (only sends to verified emails in your Resend account)
       const { data, error } = await resend.emails.send({
         from: 'Nourish <onboarding@resend.dev>',
         to: [userEmail],
-        subject: `Your Daily Nourish Summary: ${mealCount} meals today`,
+        subject: `Your Daily Nourish Summary: ${mealCount} meals, ${totalCalories} kcal`,
         html: `
-          <div style="font-family: sans-serif; padding: 20px; color: #333;">
-            <h1 style="color: #2D5A27;">Hey ${userName}! 🌱</h1>
-            <p>Here is your daily summary from Nourish:</p>
-            <div style="background: #f1f8e9; padding: 15px; border-radius: 10px; margin: 20px 0;">
-              <p style="margin: 5px 0;"><strong>Meals Logged:</strong> ${mealCount}</p>
-              <p style="margin: 5px 0;"><strong>Total Calories:</strong> ${totalCalories} kcal</p>
+          <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+            <div style="background: linear-gradient(135deg, #2D5A27, #4a8c3f); padding: 30px; border-radius: 16px 16px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 24px;">Hey ${userName}! 🌱</h1>
+              <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 14px;">Here's your daily nutrition summary</p>
             </div>
-            <p>Keep up the great work on your nutrition journey!</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #999;">You received this because you enabled Daily Summaries in your Nourish settings.</p>
+            
+            <div style="background: white; padding: 24px; border: 1px solid #e5e7eb; border-top: none;">
+              
+              <!-- Macro Overview -->
+              <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                <div style="flex: 1; background: #f1f8e9; padding: 16px; border-radius: 12px; text-align: center;">
+                  <div style="font-size: 28px; font-weight: 800; color: #2D5A27;">${totalCalories}</div>
+                  <div style="font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Calories</div>
+                </div>
+                <div style="flex: 1; background: #f0fdf4; padding: 16px; border-radius: 12px; text-align: center;">
+                  <div style="font-size: 28px; font-weight: 800; color: #16a34a;">${totalProtein}g</div>
+                  <div style="font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Protein</div>
+                </div>
+                <div style="flex: 1; background: #fff7ed; padding: 16px; border-radius: 12px; text-align: center;">
+                  <div style="font-size: 28px; font-weight: 800; color: #ea580c;">${totalCarbs}g</div>
+                  <div style="font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Carbs</div>
+                </div>
+                <div style="flex: 1; background: #eff6ff; padding: 16px; border-radius: 12px; text-align: center;">
+                  <div style="font-size: 28px; font-weight: 800; color: #2563eb;">${totalFats}g</div>
+                  <div style="font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Fats</div>
+                </div>
+              </div>
+
+              <!-- Goal Insight -->
+              <div style="background: #fefce8; border-left: 4px solid #eab308; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 16px;">
+                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #854d0e;">🎯 Goal Check: ${calPct}% of daily calories</p>
+                <p style="margin: 4px 0 0; font-size: 13px; color: #92400e;">${goalInsight}</p>
+              </div>
+
+              ${feelingInsight ? `
+              <!-- Feeling Insight -->
+              <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 16px;">
+                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #166534;">💚 How You Felt</p>
+                <p style="margin: 4px 0 0; font-size: 13px; color: #15803d;">${feelingInsight}</p>
+              </div>
+              ` : ''}
+
+              ${mealCount > 0 ? `
+              <!-- Meal Details -->
+              <h3 style="font-size: 14px; color: #333; margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 1px;">Today's Meals</h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                  <tr style="background: #f9fafb;">
+                    <th style="padding: 8px 12px; text-align: left; font-size: 11px; color: #666; text-transform: uppercase;">Meal</th>
+                    <th style="padding: 8px 12px; text-align: left; font-size: 11px; color: #666; text-transform: uppercase;">Type</th>
+                    <th style="padding: 8px 12px; text-align: left; font-size: 11px; color: #666; text-transform: uppercase;">Calories</th>
+                    <th style="padding: 8px 12px; text-align: left; font-size: 11px; color: #666; text-transform: uppercase;">Feeling</th>
+                  </tr>
+                </thead>
+                <tbody>${mealListHtml}</tbody>
+              </table>
+              ` : ''}
+            </div>
+            
+            <div style="background: #f9fafb; padding: 16px 24px; border-radius: 0 0 16px 16px; border: 1px solid #e5e7eb; border-top: none;">
+              <p style="font-size: 11px; color: #999; margin: 0;">You received this because you enabled Daily Summaries in your Nourish settings.</p>
+            </div>
           </div>
         `,
       });

@@ -1,8 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/send-reminder?secret=your_cron_secret",
+      "path": "/api/send-reminder?secret=${CRON_SECRET}",
       "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/api/send-weekly?secret=${CRON_SECRET}",
+      "schedule": "0 14 * * 0"
     }
   ],
   "rewrites": [

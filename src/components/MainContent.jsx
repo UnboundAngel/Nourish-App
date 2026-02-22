@@ -1,12 +1,13 @@
 import React from 'react';
 import { 
-  Coffee, Sun, Moon, Apple, Leaf, Trash2, Circle, CheckCircle, 
+  Leaf, Trash2, Circle, CheckCircle, 
   Activity, Droplet, Search, X 
 } from 'lucide-react';
-import { WaterBottle, WellnessTrends, DailyTargets } from './Widgets';
+import { WaterBottle, WellnessTrends, DailyTargets, TriggerFinder } from './Widgets';
 import { SortDropdown } from './SortDropdown';
 import { formatTime } from '../utils/helpers';
 import { MobileStreakCard } from './NourishGarden';
+import { getFeeling } from '../utils/feelings';
 
 function HighlightText({ text, query }) {
   if (!query || !text) return text || null;
@@ -33,6 +34,7 @@ export function MainContent({
   handleDelete, handleToggleFinish,
   use24HourTime,
   dailyStreak, getEntriesForDate, setIsStreakOpen,
+  insights,
 }) {
   return (
     <div className="max-w-[1200px] mx-auto px-3 py-4 md:p-8 space-y-5 md:space-y-8 pb-24 md:pb-32">
@@ -112,6 +114,18 @@ export function MainContent({
                 onEdit={() => setIsTargetsModalOpen(true)}
             />
             <WellnessTrends entries={todaysEntries} theme={theme} />
+            {(insights.topTrigger || insights.activeExperiment) && (
+              <div className="lg:col-span-2">
+                <TriggerFinder 
+                    topTrigger={insights.topTrigger}
+                    activeExperiment={insights.activeExperiment}
+                    experimentResults={insights.experimentResults}
+                    theme={theme}
+                    onStartExperiment={insights.startExperiment}
+                    onStopExperiment={insights.stopExperiment}
+                />
+              </div>
+            )}
         </div>
 
         {/* --- 3. Meal Entries Section --- */}
@@ -211,10 +225,14 @@ export function MainContent({
                         >
                             <div className="flex justify-between items-start mb-4">
                                 <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl ${theme.inputBg} theme-transition`}>
-                                    {entry.type === 'Breakfast' ? <Coffee size={24} /> : 
-                                     entry.type === 'Lunch' ? <Sun size={24} /> : 
-                                     entry.type === 'Dinner' ? <Moon size={24} /> : 
-                                     <Apple size={24} />}
+                                    <img 
+                                        src={entry.type === 'Breakfast' ? '/breakfast.svg' : 
+                                             entry.type === 'Lunch' ? '/lunch.svg' : 
+                                             entry.type === 'Dinner' ? '/dinner.svg' : 
+                                             '/snack.svg'} 
+                                        alt={entry.type}
+                                        className="w-6 h-6"
+                                    />
                                 </div>
                                 <div className="text-right">
                                     <span className={`block text-3xl font-black ${theme.primaryText} theme-transition leading-none`}>{entry.calories}</span>
@@ -230,7 +248,11 @@ export function MainContent({
                                 
                                 <div className="flex gap-2 flex-wrap">
                                     {!entry.finished && <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-rose-50 text-rose-500 uppercase tracking-tighter">Unfinished</span>}
-                                    {(entry.feeling === 'sick' || entry.feeling === 'bloated') && <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-amber-50 text-amber-600 uppercase tracking-tighter">{entry.feeling}</span>}
+                                    {entry.feeling && (() => { const f = getFeeling(entry.feeling); return (
+                                        <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${f.softColor} uppercase tracking-tighter flex items-center gap-1`}>
+                                            <img src={f.icon} alt={f.shortLabel} className="w-3.5 h-3.5" />{f.shortLabel}
+                                        </span>
+                                    ); })()}
                                     {entry.tags && entry.tags.split(',').map(tag => (
                                         <span key={tag} className={`text-[10px] font-black px-2 py-1 rounded-lg ${theme.inputBg} opacity-60 uppercase tracking-tighter`}>{tag.trim()}</span>
                                     ))}

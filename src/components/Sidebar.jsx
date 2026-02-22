@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Leaf, ChevronLeft, Calendar as CalendarIcon, Flame, Check, Settings, Bell, X,
-  Coffee, Droplet, Award, Info, CheckCheck
+  Coffee, Droplet, Award, Info, CheckCheck, BarChart3
 } from 'lucide-react';
 import { NourishGarden, GardenBadge } from './NourishGarden';
 
@@ -27,27 +27,28 @@ function timeAgo(ts) {
 export function Sidebar({
   theme, isSidebarCollapsed, setIsSidebarCollapsed,
   setViewDate, setIsHistoryOpen, setIsCalendarOpen, setIsSettingsOpen,
+  setIsTrendsOpen,
   dailyStreak, getEntriesForDate,
   isNotificationsOpen, setIsNotificationsOpen,
   handleMarkAllAsRead, notifications, handleNotificationClick,
   unreadCount,
 }) {
   return (
-    <aside className={`hidden md:flex flex-col ${isSidebarCollapsed ? 'w-20' : 'w-72'} min-h-screen ${theme.sidebar} p-6 border-r ${theme.border} theme-transition shadow-xl relative backdrop-blur-md z-30`}>
+    <aside className={`hidden md:flex flex-col ${isSidebarCollapsed ? 'w-[72px]' : 'w-72'} min-h-screen ${theme.sidebar} ${isSidebarCollapsed ? 'px-3 py-4' : 'p-6'} border-r ${theme.border} theme-transition shadow-xl relative backdrop-blur-md z-30`}>
       
       {/* Logo and Title */}
-      <div className={`mb-10 ${theme.primaryText} theme-transition flex items-center justify-between`}>
-          <div className="flex items-center gap-3">
+      <div className={`${isSidebarCollapsed ? 'mb-6 flex-col items-center gap-2' : 'mb-10 items-center justify-between'} ${theme.primaryText} theme-transition flex`}>
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
               <div className={`p-2 rounded-2xl ${theme.primary} text-white shadow-md`}>
-                  <Leaf size={24} />
+                  <Leaf size={isSidebarCollapsed ? 20 : 24} />
               </div>
-              <h1 className={`text-2xl font-black tracking-tight whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>Nourish</h1>
+              {!isSidebarCollapsed && <h1 className="text-2xl font-black tracking-tight whitespace-nowrap">Nourish</h1>}
           </div>
           <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className={`p-2 rounded-full ${theme.inputBg} ${theme.textMain} hover:bg-black/10 transition-all duration-300 clickable`}
+              className={`${isSidebarCollapsed ? 'w-full flex justify-center mt-2' : ''} p-1.5 rounded-full ${theme.inputBg} ${theme.textMain} hover:bg-black/10 transition-all duration-300 clickable`}
           >
-              <ChevronLeft size={20} className={`transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
+              <ChevronLeft size={16} className={`transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
           </button>
       </div>
       
@@ -99,19 +100,29 @@ export function Sidebar({
   
           <div>
               <p className={`text-[10px] font-black ${theme.accent} uppercase tracking-[0.2em] mb-4 opacity-50 ${isSidebarCollapsed ? 'hidden' : ''}`}>Insights</p>
-              <div className="space-y-2">
+              <div className={`space-y-2 ${isSidebarCollapsed ? 'flex flex-col items-center' : ''}`}>
                   <button 
                       onClick={() => setIsCalendarOpen(true)}
-                      className={`w-full py-4 rounded-2xl flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-4 px-4'} ${theme.card} ${theme.textMain} hover:scale-[1.02] active:scale-[0.98] transition-all theme-transition clickable shadow-sm`}
+                      className={`w-full ${isSidebarCollapsed ? 'py-2.5' : 'py-4'} rounded-2xl flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-4 px-4'} ${theme.card} ${theme.textMain} hover:scale-[1.02] active:scale-[0.98] transition-all theme-transition clickable shadow-sm`}
                   >
-                      <div className={`p-2 rounded-xl ${theme.inputBg}`}>
-                          <CalendarIcon size={18} className="opacity-70" />
+                      <div className={`${isSidebarCollapsed ? 'p-1.5' : 'p-2'} rounded-xl ${theme.inputBg}`}>
+                          <CalendarIcon size={isSidebarCollapsed ? 16 : 18} className="opacity-70" />
                       </div>
-                      <span className={`text-sm font-bold ${isSidebarCollapsed ? 'hidden' : ''}`}>Calendar</span>
+                      {!isSidebarCollapsed && <span className="text-sm font-bold">Calendar</span>}
                   </button>
                   
+                  <button 
+                      onClick={() => setIsTrendsOpen(true)}
+                      className={`w-full ${isSidebarCollapsed ? 'py-2.5' : 'py-4'} rounded-2xl flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-4 px-4'} ${theme.card} ${theme.textMain} hover:scale-[1.02] active:scale-[0.98] transition-all theme-transition clickable shadow-sm`}
+                  >
+                      <div className={`${isSidebarCollapsed ? 'p-1.5' : 'p-2'} rounded-xl ${theme.inputBg}`}>
+                          <BarChart3 size={isSidebarCollapsed ? 16 : 18} className="opacity-70" />
+                      </div>
+                      {!isSidebarCollapsed && <span className="text-sm font-bold">Trends</span>}
+                  </button>
+
                   {isSidebarCollapsed ? (
-                      <div className={`w-full p-3 rounded-[2rem] ${theme.card} theme-transition shadow-xl flex items-center justify-center`}>
+                      <div className={`w-full p-2 rounded-2xl ${theme.card} theme-transition shadow-sm flex items-center justify-center`}>
                           <GardenBadge dailyStreak={dailyStreak} size="sm" />
                       </div>
                   ) : (
@@ -126,21 +137,21 @@ export function Sidebar({
       </nav>
   
       {/* Settings and Notifications (Bottom) */}
-      <div className={`pt-6 border-t border-black/5 space-y-3`}>
-          <button onClick={() => setIsSettingsOpen(true)} className={`w-full flex ${isSidebarCollapsed ? 'justify-center' : 'items-center gap-4 px-4'} py-3 rounded-2xl hover:bg-black/5 hover:scale-[1.02] active:scale-[0.98] transition-colors ${theme.textMain} theme-transition clickable group`}>
-              <Settings size={20} className='opacity-40 group-hover:opacity-100 transition-opacity'/>
-              <span className={`font-bold text-sm ${isSidebarCollapsed ? 'hidden' : ''}`}>Settings</span>
+      <div className={`pt-4 border-t border-black/5 space-y-1 ${isSidebarCollapsed ? 'flex flex-col items-center' : ''}`}>
+          <button onClick={() => setIsSettingsOpen(true)} className={`w-full flex ${isSidebarCollapsed ? 'justify-center py-2.5' : 'items-center gap-4 px-4 py-3'} rounded-2xl hover:bg-black/5 hover:scale-[1.02] active:scale-[0.98] transition-colors ${theme.textMain} theme-transition clickable group`}>
+              <Settings size={isSidebarCollapsed ? 18 : 20} className='opacity-40 group-hover:opacity-100 transition-opacity'/>
+              {!isSidebarCollapsed && <span className="font-bold text-sm">Settings</span>}
           </button>
-          <div className="relative">
-              <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className={`w-full flex ${isSidebarCollapsed ? 'justify-center' : 'items-center justify-between px-4'} py-3 rounded-2xl hover:bg-black/5 hover:scale-[1.02] active:scale-[0.98] transition-colors ${theme.textMain} theme-transition clickable group relative`}>
+          <div className="relative w-full">
+              <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className={`w-full flex ${isSidebarCollapsed ? 'justify-center py-2.5' : 'items-center justify-between px-4 py-3'} rounded-2xl hover:bg-black/5 hover:scale-[1.02] active:scale-[0.98] transition-colors ${theme.textMain} theme-transition clickable group relative`}>
                   <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-4'}`}>
                       <div className="relative">
-                          <Bell size={20} className='opacity-40 group-hover:opacity-100 transition-opacity' />
+                          <Bell size={isSidebarCollapsed ? 18 : 20} className='opacity-40 group-hover:opacity-100 transition-opacity' />
                           {unreadCount > 0 && isSidebarCollapsed && (
                               <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white"></span>
                           )}
                       </div>
-                      <span className={`font-bold text-sm ${isSidebarCollapsed ? 'hidden' : ''}`}>Inbox</span>
+                      {!isSidebarCollapsed && <span className="font-bold text-sm">Inbox</span>}
                   </div>
                   {unreadCount > 0 && !isSidebarCollapsed && (
                       <span className="min-w-[20px] h-5 bg-rose-500 text-white text-[9px] font-black flex items-center justify-center rounded-full px-1">
