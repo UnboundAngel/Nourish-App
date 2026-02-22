@@ -133,7 +133,7 @@ export function TrendsPage({ entries, theme, dailyTargets, onClose, insights }) 
       
       <div className="relative z-10 flex flex-col h-full overflow-y-auto custom-scrollbar">
         {/* Header */}
-        <div className={`sticky top-0 z-20 ${theme.card} border-b ${theme.border} backdrop-blur-xl px-4 md:px-8 py-4`}>
+        <div className={`sticky top-0 z-20 ${theme.card} border-b ${theme.border} backdrop-blur-xl px-4 md:px-8 py-4`} style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
           <div className="max-w-[1200px] mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-xl ${theme.primary} text-white`}>

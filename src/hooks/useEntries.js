@@ -3,6 +3,32 @@ import { collection, addDoc, deleteDoc, doc, query, updateDoc, setDoc, getDoc, g
 import { db, appId } from '../config/firebase';
 import { saveEntries, loadEntries } from '../storage.js';
 
+// Find duplicate entry IDs: same name + same calories + same createdAt (keep the first, mark rest as dupes)
+function findDuplicateIds(entries) {
+  const seen = new Map();
+  const dupeIds = [];
+  for (const entry of entries) {
+    const key = `${(entry.name || '').toLowerCase().trim()}|${entry.calories || 0}|${entry.createdAt || 0}`;
+    if (seen.has(key)) {
+      dupeIds.push(entry.id);
+    } else {
+      seen.set(key, entry.id);
+    }
+  }
+  return dupeIds;
+}
+
+// Remove duplicates from a local entries array (same name + calories + createdAt)
+function deduplicateEntries(entries) {
+  const seen = new Set();
+  return entries.filter(entry => {
+    const key = `${(entry.name || '').toLowerCase().trim()}|${entry.calories || 0}|${entry.createdAt || 0}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function useEntries({ user }) {
   const [entries, setEntries] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,22 +44,23 @@ export function useEntries({ user }) {
   const fetchEntries = useCallback(async () => {
     if (!user || user.isAnonymous) {
       const localEntries = loadEntries();
-      setEntries(localEntries);
+      setEntries(deduplicateEntries(localEntries));
       return;
     }
     if (syncInProgress.current) return;
     syncInProgress.current = true;
 
     try {
-      // Sync local entries to Firestore (handles both local_ prefixed and any entries saved while offline/local-only)
+      // Sync local entries to Firestore ONCE, then clear localStorage immediately
       const localEntries = loadEntries();
       if (localEntries.length > 0) {
+        // Clear local storage FIRST to prevent re-upload on next refresh
+        saveEntries([]);
         const collectionRef = collection(db, 'artifacts', appId, 'users', user.uid, 'journal_entries');
         for (const entry of localEntries) {
           const { id: _id, ...entryWithoutId } = entry;
           await addDoc(collectionRef, entryWithoutId);
         }
-        saveEntries([]);
       }
 
       // Fetch last 30 days of entries (one-time read, no persistent listener)
@@ -44,9 +71,19 @@ export function useEntries({ user }) {
         orderBy('createdAt', 'desc')
       );
       const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      let data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Deduplicate: remove entries with same name + calories + createdAt (keep first)
+      const dupeIds = findDuplicateIds(data);
+      if (dupeIds.length > 0) {
+        // Delete duplicates from Firestore in background
+        for (const dupeId of dupeIds) {
+          deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'journal_entries', dupeId)).catch(() => {});
+        }
+        data = data.filter(e => !dupeIds.includes(e.id));
+      }
+
       setEntries(data);
-      saveEntries(data);
     } catch (error) {
       console.error('Error fetching entries:', error);
       // Fallback to localStorage

@@ -112,7 +112,10 @@ export function useSettings() {
 
   const handleEmailSettingsSave = async (e, user, showToast) => {
       if (e) e.preventDefault();
-      if (!user) return;
+      if (!user || user.isAnonymous) {
+        if (showToast) showToast('Please log in or create an account to save email settings', 'error');
+        return;
+      }
       try {
         // Email settings flush immediately (user clicks save)
         await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), {

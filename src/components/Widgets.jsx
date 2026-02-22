@@ -318,7 +318,7 @@ export const WellnessTrends = ({ entries, theme }) => {
 
   return (
     <Widget title="Wellness Trends" icon={BarChart3} subtitle="How you're feeling" theme={theme}>
-      <div className="flex items-end justify-between gap-4 h-32 relative">
+      <div className="flex items-stretch justify-between gap-4 h-32 relative">
         {stats.categories.map(cat => {
           const { total, issues, feelings, calories } = stats.data[cat];
           const totalHeight = (total / stats.maxVal) * 100;
@@ -326,7 +326,7 @@ export const WellnessTrends = ({ entries, theme }) => {
           const isActive = activeBar === cat;
           
           return (
-            <div key={cat} className="flex-1 flex flex-col items-center gap-2 relative">
+            <div key={cat} className="flex-1 flex flex-col items-center gap-2 relative justify-end">
               {/* Tooltip */}
               {isActive && total > 0 && (
                 <div className={`absolute bottom-full mb-2 left-1/2 -translate-x-1/2 ${theme.card} rounded-xl shadow-2xl p-3 z-50 min-w-[140px] border ${theme.border} pointer-events-none`}>

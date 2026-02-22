@@ -15,7 +15,7 @@ export function useHydration({ user }) {
   }, [waterOz]);
 
   const handleAddWater = async (amount) => {
-      const newAmount = waterOz + amount;
+      const newAmount = Math.max(0, waterOz + amount);
       setWaterOz(newAmount);
       setCustomWaterInput(''); 
       if (user && !user.isAnonymous) {

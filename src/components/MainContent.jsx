@@ -91,6 +91,11 @@ export function MainContent({
                             <button key={oz} onClick={() => handleAddWater(oz)} className={`py-2 rounded-xl ${theme.inputBg} text-[10px] font-black hover:scale-105 active:scale-95 transition-all`}>+{oz}</button>
                         ))}
                     </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {[8, 16, 24].map(oz => (
+                            <button key={`sub-${oz}`} onClick={() => handleAddWater(-oz)} className={`py-2 rounded-xl ${theme.inputBg} text-[10px] font-black opacity-40 hover:opacity-100 hover:scale-105 active:scale-95 transition-all`}>-{oz}</button>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
