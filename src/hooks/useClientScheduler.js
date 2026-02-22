@@ -48,9 +48,6 @@ export function useClientScheduler({
         const wakeMinutes = parseInt(wakeTime?.split(':')[0] || '7') * 60 + parseInt(wakeTime?.split(':')[1] || '0');
         const sleepMinutes = parseInt(sleepTime?.split(':')[0] || '23') * 60 + parseInt(sleepTime?.split(':')[1] || '0');
 
-        // Check if we already sent a notification today
-        if (lastCheckRef.current.date === todayStr) return;
-
         // Check today's entries
         const todayEntries = entries.filter(e => {
           const entryDate = new Date(e.createdAt).toISOString().split('T')[0];

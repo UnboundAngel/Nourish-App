@@ -123,7 +123,7 @@ export function Sidebar({
 
                   {isSidebarCollapsed ? (
                       <div className={`w-full p-2 rounded-2xl ${theme.card} theme-transition shadow-sm flex items-center justify-center`}>
-                          <GardenBadge dailyStreak={dailyStreak} size="sm" />
+                          <GardenBadge dailyStreak={dailyStreak} size="sm" theme={theme} />
                       </div>
                   ) : (
                       <NourishGarden 

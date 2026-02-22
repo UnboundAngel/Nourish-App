@@ -176,13 +176,17 @@ export default function NourishApp() {
   };
 
   const handleAuth = async (e, customEmail, customPassword, customMode, onboardingName, isQuiet) => {
-    const result = await rawHandleAuth(e, customEmail, customPassword, customMode, onboardingName, isQuiet, { handleSaveProfile });
+    // When signing up from Settings (no onboardingName), use existing userName so profile migrates
+    const effectiveName = onboardingName || userName || localStorage.getItem('nourish-user-name') || 'Friend';
+    const result = await rawHandleAuth(e, customEmail, customPassword, customMode, effectiveName, isQuiet, { handleSaveProfile });
     if (result && !isQuiet) setIsSettingsOpen(false);
     return result;
   };
 
   const handleGoogleLogin = async (onboardingName, isQuiet) => {
-    const result = await rawHandleGoogleLogin(onboardingName, isQuiet, { handleSaveProfile });
+    // When signing up from Settings (no onboardingName), use existing userName so profile migrates
+    const effectiveName = onboardingName || userName || localStorage.getItem('nourish-user-name') || 'Friend';
+    const result = await rawHandleGoogleLogin(effectiveName, isQuiet, { handleSaveProfile });
     if (result && !isQuiet) setIsSettingsOpen(false);
     return result;
   };
@@ -194,10 +198,10 @@ export default function NourishApp() {
   };
 
   // --- Loading Screen ---
-  if (loading) return <div className={`min-h-screen flex items-center justify-center ${theme.bg}`}><Activity className="animate-spin text-[#2D5A27]" /></div>;
+  if (loading) return <div className={`min-h-screen flex items-center justify-center ${theme.bg}`}><Activity className={`animate-spin ${theme.primaryText}`} /></div>;
 
   return (
-    <div className={`min-h-screen flex ${theme.bg} transition-colors duration-500 font-sans text-slate-800`}>
+    <div className={`min-h-screen flex ${theme.bg} transition-colors duration-500 font-sans ${theme.textMain}`}>
       <GlobalStyles />
 
       {/* Update Available Banner */}

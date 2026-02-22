@@ -25,12 +25,11 @@ export function useEntries({ user }) {
     syncInProgress.current = true;
 
     try {
-      // Sync local-only entries to Firestore
+      // Sync local entries to Firestore (handles both local_ prefixed and any entries saved while offline/local-only)
       const localEntries = loadEntries();
-      const localOnlyEntries = localEntries.filter(e => e.id && String(e.id).startsWith('local_'));
-      if (localOnlyEntries.length > 0) {
+      if (localEntries.length > 0) {
         const collectionRef = collection(db, 'artifacts', appId, 'users', user.uid, 'journal_entries');
-        for (const entry of localOnlyEntries) {
+        for (const entry of localEntries) {
           const { id: _id, ...entryWithoutId } = entry;
           await addDoc(collectionRef, entryWithoutId);
         }

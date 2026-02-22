@@ -43,13 +43,20 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
             }
             // Returning user who previously signed in — restore auth
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { // eslint-disable-line no-undef
-                    await signInWithCustomToken(auth, __initial_auth_token); // eslint-disable-line no-undef
+                const token = typeof window !== 'undefined' && window.__initial_auth_token;
+                if (token) {
+                    await signInWithCustomToken(auth, token);
                 } else {
                     await signInAnonymously(auth);
                 }
             } catch (error) { 
                 console.error("Auth failed", error);
+                // Still allow app to work in local-only mode
+                const localName = localStorage.getItem('nourish-user-name');
+                if (localName) {
+                    setUserName(localName);
+                    setShowWelcome(false);
+                }
                 setLoading(false);
             }
             return;

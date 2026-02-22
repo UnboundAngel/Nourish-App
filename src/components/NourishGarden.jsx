@@ -332,7 +332,7 @@ export function NourishGarden({ theme, dailyStreak, getEntriesForDate }) {
 }
 
 // --- Compact Garden Badge (for mobile nav) ---
-export function GardenBadge({ dailyStreak, size = 'md' }) {
+export function GardenBadge({ dailyStreak, size = 'md', theme = {} }) {
   const tier = getTier(dailyStreak);
   const sizes = {
     sm: 'w-8 h-8 text-sm',
@@ -364,7 +364,7 @@ export function MobileStreakCard({ theme, dailyStreak, getEntriesForDate, onClic
     >
       <div className={`absolute inset-0 bg-gradient-to-r ${tier.gradient} opacity-[0.06]`} />
       <div className="relative z-10 flex items-center gap-4">
-        <GardenBadge dailyStreak={dailyStreak} size="md" />
+        <GardenBadge dailyStreak={dailyStreak} size="md" theme={theme} />
         <div className="flex-1 text-left">
           <div className="flex items-center gap-2">
             <span className={`text-sm font-black ${tier.color}`}>{tier.name}</span>
