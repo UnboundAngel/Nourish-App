@@ -48,6 +48,15 @@ export default function NourishApp() {
     weeklySummary, setWeeklySummary,
     hydrationReminders, setHydrationReminders,
     mealReminders, setMealReminders,
+    pushNotifications, setPushNotifications,
+    goodnightMessages, setGoodnightMessages,
+    goodmorningMessages, setGoodmorningMessages,
+    reminderTimes, setReminderTimes,
+    wakeTime, setWakeTime,
+    sleepTime, setSleepTime,
+    timezone, setTimezone,
+    weight, setWeight,
+    weightUnit, setWeightUnit,
     dailyTargets, setDailyTargets,
     editedTargets, setEditedTargets,
     userName, setUserName,
@@ -56,6 +65,7 @@ export default function NourishApp() {
     handleTimeFormatChange: rawHandleTimeFormatChange,
     handleEmailSettingsSave: rawHandleEmailSettingsSave,
     handleSaveTargets: rawHandleSaveTargets,
+    handleSaveNotificationSettings: rawHandleSaveNotificationSettings,
   } = settings;
 
   const theme = THEMES[currentThemeId];
@@ -80,6 +90,9 @@ export default function NourishApp() {
     setUserName, setCurrentThemeId, setUse24HourTime, setUserEmail,
     setDailySummary, setWeeklySummary, setDailyStreak, setWaterOz: (v) => hydration.setWaterOz(v),
     setDailyTargets, setEditedTargets, setShowWelcome,
+    setPushNotifications, setGoodnightMessages, setGoodmorningMessages,
+    setReminderTimes, setWakeTime, setSleepTime, setTimezone,
+    setWeight, setWeightUnit, setMealReminders, setHydrationReminders,
   });
 
   // --- Hydration ---
@@ -340,6 +353,29 @@ export default function NourishApp() {
         setHydrationReminders={setHydrationReminders}
         handleEmailSettingsSave={handleEmailSettingsSave}
         requestNotificationPermission={requestNotificationPermission}
+        pushNotifications={pushNotifications}
+        setPushNotifications={setPushNotifications}
+        goodnightMessages={goodnightMessages}
+        setGoodnightMessages={setGoodnightMessages}
+        goodmorningMessages={goodmorningMessages}
+        setGoodmorningMessages={setGoodmorningMessages}
+        reminderTimes={reminderTimes}
+        setReminderTimes={setReminderTimes}
+        wakeTime={wakeTime}
+        setWakeTime={setWakeTime}
+        sleepTime={sleepTime}
+        setSleepTime={setSleepTime}
+        timezone={timezone}
+        setTimezone={setTimezone}
+        weight={weight}
+        setWeight={setWeight}
+        weightUnit={weightUnit}
+        setWeightUnit={setWeightUnit}
+        fcmToken={fcmToken}
+        permissionStatus={permissionStatus}
+        requestPushPermission={requestPermission}
+        showToast={showToast}
+        handleSaveNotificationSettings={() => rawHandleSaveNotificationSettings(user, showToast)}
       />
       </Suspense>
 

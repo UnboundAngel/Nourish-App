@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getRandomMessage } from '../utils/notificationMessages';
 
 let nextId = 10;
 
@@ -8,6 +9,7 @@ export function useNotifications({ todaysEntries, mealReminders, hydrationRemind
   ]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const prevEntryCountRef = useRef(0);
+  const lastReminderRef = useRef({ type: null, hour: null });
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -55,7 +57,7 @@ export function useNotifications({ todaysEntries, mealReminders, hydrationRemind
     prevEntryCountRef.current = currentCount;
   }, [todaysEntries, addNotification]);
 
-  // Meal & hydration reminder intervals (in-app + desktop)
+  // Meal & hydration reminder intervals (in-app + desktop) with personality-driven messages
   useEffect(() => {
     const mealInterval = mealReminders ? setInterval(() => {
       const hour = new Date().getHours();
@@ -63,24 +65,32 @@ export function useNotifications({ todaysEntries, mealReminders, hydrationRemind
       const hasLunch = todaysEntries.some(e => e.type === 'Lunch');
       const hasDinner = todaysEntries.some(e => e.type === 'Dinner');
 
-      let msg = null;
-      if (hour >= 8 && hour < 11 && !hasBreakfast) msg = "Don't forget to log breakfast!";
-      else if (hour >= 12 && hour < 15 && !hasLunch) msg = "Lunchtime — have you eaten?";
-      else if (hour >= 18 && hour < 21 && !hasDinner) msg = "Dinner time! What are you having?";
+      // Anti-spam: don't send the same type in the same hour
+      let mealType = null;
+      let title = null;
+      if (hour >= 8 && hour < 11 && !hasBreakfast) { mealType = 'breakfast'; title = 'Breakfast Time! 🍳'; }
+      else if (hour >= 12 && hour < 15 && !hasLunch) {
+        // Anti-spam: if breakfast was sent and ignored, skip lunch
+        if (lastReminderRef.current.type === 'breakfast' && !hasBreakfast) return;
+        mealType = 'lunch'; title = 'Lunch Break! 🥗';
+      }
+      else if (hour >= 18 && hour < 21 && !hasDinner) { mealType = 'dinner'; title = 'Dinner Time! 🍽️'; }
 
-      if (msg) {
+      if (mealType && lastReminderRef.current.type !== mealType) {
+        const msg = getRandomMessage(mealType);
+        lastReminderRef.current = { type: mealType, hour };
         addNotification(msg, 'reminder');
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification("Nourish", { body: msg, icon: '/Nourish-192.png' });
+          new Notification(title, { body: msg, icon: '/Nourish-192.png' });
         }
       }
     }, 30 * 60 * 1000) : null;
 
     const hydrationInterval = hydrationReminders ? setInterval(() => {
-      const msg = "Stay hydrated! Time for a glass of water.";
+      const msg = getRandomMessage('hydration');
       addNotification(msg, 'hydration');
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification("Nourish", { body: msg, icon: '/Nourish-192.png' });
+        new Notification("Hydration Check 💧", { body: msg, icon: '/Nourish-192.png' });
       }
     }, 2 * 60 * 60 * 1000) : null;
 

@@ -35,6 +35,17 @@ export function useSettings() {
   const [hydrationReminders, setHydrationReminders] = useState(true);
   const [mealReminders, setMealReminders] = useState(true);
 
+  // Push Notification Settings
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [goodnightMessages, setGoodnightMessages] = useState(true);
+  const [goodmorningMessages, setGoodmorningMessages] = useState(true);
+  const [reminderTimes, setReminderTimes] = useState({ breakfast: '08:00', lunch: '12:00', dinner: '18:00' });
+  const [wakeTime, setWakeTime] = useState('07:00');
+  const [sleepTime, setSleepTime] = useState('23:00');
+  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [weight, setWeight] = useState(null);
+  const [weightUnit, setWeightUnit] = useState('lbs');
+
   // Daily Targets
   const [dailyTargets, setDailyTargets] = useState({
     calories: 2000,
@@ -135,6 +146,29 @@ export function useSettings() {
     setIsTargetsModalOpen(false);
   };
 
+  const handleSaveNotificationSettings = async (user, showToast) => {
+    if (!user || user.isAnonymous) return;
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), {
+        pushNotifications,
+        goodnightMessages,
+        goodmorningMessages,
+        mealReminders,
+        hydrationReminders,
+        reminderTimes,
+        wakeTime,
+        sleepTime,
+        timezone,
+        weight: weight ? Number(weight) : null,
+        weightUnit,
+      }, { merge: true });
+      if (showToast) showToast('Notification settings saved!', 'success');
+    } catch (e) {
+      console.error('Save notification settings error:', e);
+      if (showToast) showToast('Failed to save settings', 'error');
+    }
+  };
+
   return {
     currentThemeId, setCurrentThemeId,
     isModalOpen, setIsModalOpen,
@@ -154,6 +188,15 @@ export function useSettings() {
     weeklySummary, setWeeklySummary,
     hydrationReminders, setHydrationReminders,
     mealReminders, setMealReminders,
+    pushNotifications, setPushNotifications,
+    goodnightMessages, setGoodnightMessages,
+    goodmorningMessages, setGoodmorningMessages,
+    reminderTimes, setReminderTimes,
+    wakeTime, setWakeTime,
+    sleepTime, setSleepTime,
+    timezone, setTimezone,
+    weight, setWeight,
+    weightUnit, setWeightUnit,
     dailyTargets, setDailyTargets,
     editedTargets, setEditedTargets,
     userName, setUserName,
@@ -162,5 +205,6 @@ export function useSettings() {
     handleTimeFormatChange,
     handleEmailSettingsSave,
     handleSaveTargets,
+    handleSaveNotificationSettings,
   };
 }

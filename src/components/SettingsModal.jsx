@@ -1,5 +1,5 @@
-import React from 'react';
-import { LogIn, LogOut, Eye, EyeOff, Clock, Palette, Bell } from 'lucide-react';
+import React, { useState } from 'react';
+import { LogIn, LogOut, Eye, EyeOff, Clock, Palette, Bell, Smartphone, Globe, Moon, Sun } from 'lucide-react';
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
 import { THEMES } from './ThemeStyles';
@@ -26,7 +26,21 @@ export function SettingsModal({
   hydrationReminders, setHydrationReminders,
   handleEmailSettingsSave,
   requestNotificationPermission,
+  // Push Notifications
+  pushNotifications, setPushNotifications,
+  goodnightMessages, setGoodnightMessages,
+  goodmorningMessages, setGoodmorningMessages,
+  reminderTimes, setReminderTimes,
+  wakeTime, setWakeTime,
+  sleepTime, setSleepTime,
+  timezone, setTimezone,
+  weight, setWeight,
+  weightUnit, setWeightUnit,
+  fcmToken, permissionStatus, requestPushPermission,
+  showToast,
+  handleSaveNotificationSettings,
 }) {
+  const [showTimezoneEdit, setShowTimezoneEdit] = useState(false);
   return (
     <Modal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} title="Settings" theme={theme}>
         <div className="space-y-6">
@@ -124,11 +138,127 @@ export function SettingsModal({
                </div>
             </Widget>
             
-            {/* Notification Settings */}
-            <Widget title="Notifications" icon={Bell} theme={theme} className="p-0">
+            {/* Push Notification Settings */}
+            <Widget title="Push Notifications" icon={Smartphone} theme={theme} className="p-0">
                 <div className="p-4 space-y-4">
-                    <h4 className={`text-xs font-bold uppercase tracking-wide opacity-50 mb-3 ${theme.textMain} theme-transition`}>Email Preferences</h4>
+                    {/* Enable Push Notifications */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className={`font-bold text-sm ${theme.textMain}`}>Push Notifications</p>
+                            <p className={`text-[10px] opacity-40 ${theme.textMain}`}>
+                                {permissionStatus === 'granted' ? 'Enabled' : permissionStatus === 'denied' ? 'Blocked in browser' : 'Not enabled'}
+                            </p>
+                        </div>
+                        <button 
+                            onClick={async () => {
+                                if (permissionStatus !== 'granted') {
+                                    const granted = await requestPushPermission();
+                                    if (granted && setPushNotifications) setPushNotifications(true);
+                                } else if (setPushNotifications) {
+                                    setPushNotifications(!pushNotifications);
+                                }
+                            }}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${pushNotifications && permissionStatus === 'granted' ? `${theme.primary} text-white` : `${theme.inputBg} ${theme.textMain} opacity-60`}`}
+                        >
+                            {pushNotifications && permissionStatus === 'granted' ? 'On' : 'Off'}
+                        </button>
+                    </div>
+
+                    <div className={`w-full h-px ${theme.border} theme-transition`}></div>
+
+                    {/* Meal Reminder Times */}
+                    <h4 className={`text-xs font-bold uppercase tracking-wide opacity-50 ${theme.textMain}`}>Meal Reminder Times</h4>
                     
+                    <label className={`flex items-center justify-between text-sm font-medium ${theme.textMain}`}>
+                        <span>Meal Reminders</span>
+                        <input type="checkbox" checked={mealReminders} onChange={e => setMealReminders(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                    </label>
+
+                    {mealReminders && (
+                        <div className="space-y-2 pl-2">
+                            <div className="flex items-center justify-between">
+                                <span className={`text-xs font-bold ${theme.textMain} opacity-60`}>Breakfast</span>
+                                <input type="time" value={reminderTimes?.breakfast || '08:00'} onChange={e => setReminderTimes && setReminderTimes(prev => ({...prev, breakfast: e.target.value}))} className={`p-1.5 rounded-lg text-xs font-bold ${theme.inputBg} ${theme.textMain} outline-none`} />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className={`text-xs font-bold ${theme.textMain} opacity-60`}>Lunch</span>
+                                <input type="time" value={reminderTimes?.lunch || '12:00'} onChange={e => setReminderTimes && setReminderTimes(prev => ({...prev, lunch: e.target.value}))} className={`p-1.5 rounded-lg text-xs font-bold ${theme.inputBg} ${theme.textMain} outline-none`} />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className={`text-xs font-bold ${theme.textMain} opacity-60`}>Dinner</span>
+                                <input type="time" value={reminderTimes?.dinner || '18:00'} onChange={e => setReminderTimes && setReminderTimes(prev => ({...prev, dinner: e.target.value}))} className={`p-1.5 rounded-lg text-xs font-bold ${theme.inputBg} ${theme.textMain} outline-none`} />
+                            </div>
+                        </div>
+                    )}
+
+                    <label className={`flex items-center justify-between text-sm font-medium ${theme.textMain}`}>
+                        <span>Hydration Reminders</span>
+                        <input type="checkbox" checked={hydrationReminders} onChange={e => setHydrationReminders(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                    </label>
+
+                    <div className={`w-full h-px ${theme.border} theme-transition`}></div>
+
+                    {/* Goodnight / Goodmorning */}
+                    <h4 className={`text-xs font-bold uppercase tracking-wide opacity-50 ${theme.textMain}`}>Daily Messages</h4>
+                    <label className={`flex items-center justify-between text-sm font-medium ${theme.textMain}`}>
+                        <div className="flex items-center gap-2"><Sun size={14} className="opacity-50" /><span>Good Morning</span></div>
+                        <input type="checkbox" checked={goodmorningMessages ?? true} onChange={e => setGoodmorningMessages && setGoodmorningMessages(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                    </label>
+                    <label className={`flex items-center justify-between text-sm font-medium ${theme.textMain}`}>
+                        <div className="flex items-center gap-2"><Moon size={14} className="opacity-50" /><span>Goodnight</span></div>
+                        <input type="checkbox" checked={goodnightMessages ?? true} onChange={e => setGoodnightMessages && setGoodnightMessages(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                    </label>
+
+                    <div className={`w-full h-px ${theme.border} theme-transition`}></div>
+
+                    {/* Schedule Info */}
+                    <h4 className={`text-xs font-bold uppercase tracking-wide opacity-50 ${theme.textMain}`}>Your Schedule</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className={`text-[10px] font-bold uppercase opacity-40 block mb-1 ${theme.textMain}`}>Wake Up</label>
+                            <input type="time" value={wakeTime || '07:00'} onChange={e => setWakeTime && setWakeTime(e.target.value)} className={`w-full p-2 rounded-xl text-sm font-bold ${theme.inputBg} ${theme.textMain} outline-none`} />
+                        </div>
+                        <div>
+                            <label className={`text-[10px] font-bold uppercase opacity-40 block mb-1 ${theme.textMain}`}>Sleep</label>
+                            <input type="time" value={sleepTime || '23:00'} onChange={e => setSleepTime && setSleepTime(e.target.value)} className={`w-full p-2 rounded-xl text-sm font-bold ${theme.inputBg} ${theme.textMain} outline-none`} />
+                        </div>
+                    </div>
+
+                    {/* Timezone */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Globe size={14} className="opacity-50" />
+                            <span className={`text-xs font-bold ${theme.textMain} opacity-60`}>{timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
+                        </div>
+                        <button onClick={() => setShowTimezoneEdit(!showTimezoneEdit)} className={`text-[10px] font-bold opacity-40 hover:opacity-100 ${theme.textMain}`}>
+                            {showTimezoneEdit ? 'Done' : 'Change'}
+                        </button>
+                    </div>
+                    {showTimezoneEdit && (
+                        <input 
+                            type="text" 
+                            placeholder="e.g. America/New_York" 
+                            value={timezone || ''} 
+                            onChange={e => setTimezone && setTimezone(e.target.value)} 
+                            className={`w-full p-2 rounded-xl text-xs font-bold ${theme.inputBg} ${theme.textMain} outline-none`} 
+                        />
+                    )}
+
+                    {/* Save Button */}
+                    {handleSaveNotificationSettings && (
+                        <button 
+                            onClick={handleSaveNotificationSettings}
+                            className={`w-full py-2.5 rounded-xl ${theme.primary} text-white font-bold text-sm hover:brightness-90 active:scale-95 transition-all`}
+                        >
+                            Save Notification Settings
+                        </button>
+                    )}
+                </div>
+            </Widget>
+
+            {/* Email Notification Settings */}
+            <Widget title="Email Notifications" icon={Bell} theme={theme} className="p-0">
+                <div className="p-4 space-y-4">
                     <form onSubmit={handleEmailSettingsSave} className="space-y-3">
                         <input 
                             type="email" 
@@ -151,26 +281,6 @@ export function SettingsModal({
                             Save Email Settings
                         </button>
                     </form>
-                    
-                    <div className={`w-full h-px ${theme.border} theme-transition`}></div>
-                    
-                    <h4 className={`text-xs font-bold uppercase tracking-wide opacity-50 mt-3 mb-2 ${theme.textMain} theme-transition`}>Desktop Reminders</h4>
-                    <label className={`flex items-center justify-between text-sm font-medium ${theme.textMain} theme-transition`}>
-                        <span>Meal Reminders</span>
-                        <input type="checkbox" checked={mealReminders} onChange={e => setMealReminders(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" />
-                    </label>
-                    <label className={`flex items-center justify-between text-sm font-medium ${theme.textMain} theme-transition`}>
-                        <span>Hydration Reminders</span>
-                        <input type="checkbox" checked={hydrationReminders} onChange={e => setHydrationReminders(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" />
-                    </label>
-
-                    <div className={`w-full h-px ${theme.border} theme-transition`}></div>
-                    
-                    {/* System Notifications */}
-                    <button onClick={requestNotificationPermission} className={`w-full p-3 rounded-xl ${theme.inputBg} flex items-center justify-between group hover:bg-black/10 hover:scale-102 active:scale-98 transition-colors theme-transition`}>
-                        <span className={`font-bold text-sm ${theme.textMain} theme-transition`}>Request System Notifications</span>
-                        <Bell size={16} className="opacity-50 group-hover:opacity-100" />
-                    </button>
                 </div>
             </Widget>
         </div>

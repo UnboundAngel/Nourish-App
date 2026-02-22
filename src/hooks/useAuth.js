@@ -13,7 +13,7 @@ import {
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db, appId } from '../config/firebase';
 
-export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setUserEmail, setDailySummary, setWeeklySummary, setDailyStreak, setWaterOz, setDailyTargets, setEditedTargets, setShowWelcome }) {
+export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setUserEmail, setDailySummary, setWeeklySummary, setDailyStreak, setWaterOz, setDailyTargets, setEditedTargets, setShowWelcome, setPushNotifications, setGoodnightMessages, setGoodmorningMessages, setReminderTimes, setWakeTime, setSleepTime, setTimezone, setWeight, setWeightUnit, setMealReminders, setHydrationReminders }) {
   const [user, setUser] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -90,6 +90,18 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
             if (data.weeklySummary !== undefined) setWeeklySummary(data.weeklySummary);
             if (data.dailyStreak !== undefined) setDailyStreak(data.dailyStreak);
             if (data.waterOz !== undefined) setWaterOz(data.waterOz);
+            // Push notification settings
+            if (data.pushNotifications !== undefined) setPushNotifications(data.pushNotifications);
+            if (data.goodnightMessages !== undefined) setGoodnightMessages(data.goodnightMessages);
+            if (data.goodmorningMessages !== undefined) setGoodmorningMessages(data.goodmorningMessages);
+            if (data.reminderTimes) setReminderTimes(data.reminderTimes);
+            if (data.wakeTime) setWakeTime(data.wakeTime);
+            if (data.sleepTime) setSleepTime(data.sleepTime);
+            if (data.timezone) setTimezone(data.timezone);
+            if (data.weight !== undefined) setWeight(data.weight);
+            if (data.weightUnit) setWeightUnit(data.weightUnit);
+            if (data.mealReminders !== undefined) setMealReminders(data.mealReminders);
+            if (data.hydrationReminders !== undefined) setHydrationReminders(data.hydrationReminders);
             if (data.dailyTargets) {
                 setDailyTargets(data.dailyTargets);
                 setEditedTargets(data.dailyTargets);

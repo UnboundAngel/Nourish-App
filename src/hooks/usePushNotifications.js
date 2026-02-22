@@ -46,7 +46,7 @@ export function usePushNotifications({ user, showToast }) {
 
     try {
       const token = await getToken(messaging, {
-        vapidKey: 'YOUR_VAPID_KEY_HERE' // TODO: Replace with actual VAPID key from Firebase Console
+        vapidKey: 'BKwhMjzSQtuuEb7g9xLfgSs58w4fb1M4Ch6ssI_hpYJbxtcuZxNmXWwxSZXiB9BlTfMtnqIV0_oy_E363TDl0nE' // TODO: Replace with actual VAPID key from Firebase Console
       });
 
       if (token) {
