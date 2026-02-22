@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Activity } from 'lucide-react';
 import { THEMES, GlobalStyles } from './components/ThemeStyles';
 const CustomCalendar = lazy(() => import('./components/Calendar').then(m => ({ default: m.CustomCalendar })));
@@ -24,6 +24,7 @@ import { useInsights } from './hooks/useInsights';
 import { useUpdateCheck } from './hooks/useUpdateCheck';
 import { useToast } from './hooks/useToast';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { useClientScheduler } from './hooks/useClientScheduler';
 import { formatTime } from './utils/helpers';
 
 export default function NourishApp() {
@@ -75,6 +76,11 @@ export default function NourishApp() {
   const [isTrendsOpen, setIsTrendsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
 
+  // --- Hydration (must be before useAuth since useAuth references it) ---
+  const [tempUser, setTempUser] = useState(null);
+  const hydration = useHydration({ user: tempUser });
+  const { waterOz, handleAddWater } = hydration;
+
   // --- Auth ---
   const {
     user, profileData, loading,
@@ -95,9 +101,10 @@ export default function NourishApp() {
     setWeight, setWeightUnit, setMealReminders, setHydrationReminders,
   });
 
-  // --- Hydration ---
-  const hydration = useHydration({ user });
-  const { waterOz, handleAddWater } = hydration;
+  // Update hydration user reference when auth user changes
+  useEffect(() => {
+    setTempUser(user);
+  }, [user]);
 
   // --- Entries ---
   const {
@@ -141,6 +148,21 @@ export default function NourishApp() {
 
   // --- Push Notifications ---
   const { fcmToken, permissionStatus, requestPermission, unregisterFCMToken } = usePushNotifications({ user, showToast });
+
+  // --- Client-Side Scheduler (workaround for Vercel free tier) ---
+  useClientScheduler({
+    user,
+    pushNotifications,
+    mealReminders,
+    goodnightMessages,
+    goodmorningMessages,
+    reminderTimes,
+    wakeTime,
+    sleepTime,
+    timezone,
+    entries,
+    showToast,
+  });
 
   // --- Wrapped Settings Handlers (pass live user) ---
   const handleThemeChange = (newTheme) => rawHandleThemeChange(newTheme, user);
