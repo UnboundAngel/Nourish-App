@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  Leaf, Trash2, Circle, CheckCircle, 
+  Leaf, Moon, Trash2, Circle, CheckCircle, 
   Activity, Droplet, Search, X 
 } from 'lucide-react';
 import { WaterBottle, WellnessTrends, DailyTargets, TriggerFinder } from './Widgets';
