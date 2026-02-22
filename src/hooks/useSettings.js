@@ -108,30 +108,48 @@ export function useSettings() {
       if (user) queueProfileUpdate({ use24HourTime: val }, user);
   };
 
-  const handleEmailSettingsSave = async (e, user) => {
+  const lastSavedEmailRef = useRef('');
+
+  const handleEmailSettingsSave = async (e, user, showToast) => {
       if (e) e.preventDefault();
       if (!user) return;
-      // Email settings flush immediately (user clicks save)
-      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), {
-          email: userEmail,
-          dailySummary,
-          weeklySummary
-      }, { merge: true });
-      // Sync to flat email_subscribers collection for efficient cron queries
-      if (dailySummary && userEmail) {
-          await setDoc(doc(db, 'artifacts', appId, 'email_subscribers', user.uid), {
-              email: userEmail,
-              displayName: userName,
-              dailySummary,
-              weeklySummary
-          });
-      } else {
-          // Remove from subscribers if opted out or no email
-          try {
-              await deleteDoc(doc(db, 'artifacts', appId, 'email_subscribers', user.uid));
-          } catch (_) { /* doc may not exist */ }
+      try {
+        // Email settings flush immediately (user clicks save)
+        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), {
+            email: userEmail,
+            dailySummary,
+            weeklySummary
+        }, { merge: true });
+        // Sync to flat email_subscribers collection for efficient cron queries
+        if (dailySummary && userEmail) {
+            await setDoc(doc(db, 'artifacts', appId, 'email_subscribers', user.uid), {
+                email: userEmail,
+                displayName: userName,
+                dailySummary,
+                weeklySummary
+            });
+        } else {
+            // Remove from subscribers if opted out or no email
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'email_subscribers', user.uid));
+            } catch (_) { /* doc may not exist */ }
+        }
+        // Send a test email whenever the email address changes
+        if (userEmail && userEmail !== lastSavedEmailRef.current) {
+            lastSavedEmailRef.current = userEmail;
+            fetch('/api/send-welcome', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail, name: userName || 'Friend' }),
+            }).catch(() => {});
+            if (showToast) showToast(`Test email sent to ${userEmail}!`, 'success');
+        } else {
+            if (showToast) showToast('Email preferences saved!', 'success');
+        }
+      } catch (err) {
+        console.error('Email settings save error:', err);
+        if (showToast) showToast('Failed to save email settings', 'error');
       }
-      alert("Email preferences saved!");
   };
 
   const handleSaveTargets = async (newTargets, user) => {

@@ -25,6 +25,7 @@ import { useUpdateCheck } from './hooks/useUpdateCheck';
 import { useToast } from './hooks/useToast';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useClientScheduler } from './hooks/useClientScheduler';
+import { useFoodMemory } from './hooks/useFoodMemory';
 import { formatTime } from './utils/helpers';
 
 export default function NourishApp() {
@@ -121,6 +122,9 @@ export default function NourishApp() {
     handleDelete, handleToggleFinish,
   } = useEntries({ user });
 
+  // --- Food Memory (pantry + history for quick-fill) ---
+  const foodMemory = useFoodMemory({ entries });
+
   // --- Streak ---
   useStreak({ user, loading, profileData, getEntriesForDate, setDailyStreak });
 
@@ -167,7 +171,7 @@ export default function NourishApp() {
   // --- Wrapped Settings Handlers (pass live user) ---
   const handleThemeChange = (newTheme) => rawHandleThemeChange(newTheme, user);
   const handleTimeFormatChange = (val) => rawHandleTimeFormatChange(val, user);
-  const handleEmailSettingsSave = (e) => rawHandleEmailSettingsSave(e, user);
+  const handleEmailSettingsSave = (e) => rawHandleEmailSettingsSave(e, user, showToast);
   const handleSaveTargets = (newTargets) => rawHandleSaveTargets(newTargets, user);
 
   // --- Wrapped Auth Handlers ---
@@ -415,6 +419,7 @@ export default function NourishApp() {
           editingId={editingId}
           initialData={editingId ? entries.find(e => e.id === editingId) : null}
           use24HourTime={use24HourTime}
+          foodMemory={foodMemory}
         />
       </div>
 

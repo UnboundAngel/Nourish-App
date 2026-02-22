@@ -1,18 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Clock, ChevronUp, ChevronDown, X, Tag } from 'lucide-react';
+import { Clock, ChevronUp, ChevronDown, X, Tag, Zap, Heart } from 'lucide-react';
 import { Modal } from './Modals';
 import { FEELING_LIST, normalizeFeeling } from '../utils/feelings';
 
-const CALORIE_MAP = {
-    protein: 4,
-    carbs: 4,
-    fats: 9
-};
-
+const CALORIE_MAP = { protein: 4, carbs: 4, fats: 9 };
 const SUGGESTED_TAGS = ['Healthy', 'Homemade', 'Takeout', 'Snack', 'High Protein', 'Low Carb', 'Cheat Meal', 'Meal Prep'];
 
-export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialData, use24HourTime }) => {
-    // --- Internal State ---
+export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialData, use24HourTime, foodMemory }) => {
     const [formData, setFormData] = useState({
         name: '', calories: 0, protein: 0, carbs: 0, fats: 0, type: 'Breakfast',
         time: '12:00', finished: true, feeling: 'good', note: '', tags: ''
@@ -20,7 +14,11 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
     const [isChangingTime, setIsChangingTime] = useState(false);
     const [errors, setErrors] = useState({});
     const [showScrollHint, setShowScrollHint] = useState(true);
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [showPantry, setShowPantry] = useState(false);
     const nameRef = useRef(null);
+    const suggestionsRef = useRef(null);
     const caloriesRef = useRef(null);
     const caloriesInputRef = useRef(null);
     const calHubRef = useRef(null);
@@ -42,6 +40,20 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         );
     };
 
+    const applyFood = (food) => {
+        setFormData(prev => ({
+            ...prev,
+            name: food.name,
+            calories: food.calories,
+            protein: food.protein,
+            carbs: food.carbs,
+            fats: food.fats,
+        }));
+        setShowSuggestions(false);
+        if (errors.name) setErrors(prev => ({...prev, name: null}));
+        if (errors.calories) setErrors(prev => ({...prev, calories: null}));
+    };
+
     // --- Effects ---
     useEffect(() => {
         if (isOpen) {
@@ -57,6 +69,9 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
             setIsChangingTime(false);
             setErrors({});
             setShowScrollHint(true);
+            setSuggestions([]);
+            setShowSuggestions(false);
+            setShowPantry(false);
         }
     }, [isOpen, editingId, initialData, getCurrentTime]);
 
@@ -192,6 +207,13 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         return `${formattedH}:${minutes} ${suffix}`;
     };
 
+    const commonMeals = useMemo(() => {
+        if (!foodMemory) return [];
+        return foodMemory.getCommonMeals(formData.type);
+    }, [foodMemory, formData.type]);
+
+    const inPantry = foodMemory && formData.name.trim() && foodMemory.isInPantry(formData.name);
+
     if (!isOpen) return null;
 
     return (
@@ -201,20 +223,104 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                 {/* 1. TOP BAR: NAME & TIME */}
                 <div className="space-y-4 sm:space-y-6">
                     <div className="text-center">
-                        <input 
-                            ref={nameRef}
-                            type="text" 
-                            placeholder="What did you eat?" 
-                            className={`w-full bg-transparent font-black text-2xl sm:text-3xl outline-none placeholder:opacity-10 ${theme.textMain} text-center border-b-2 pb-2 transition-colors ${errors.name ? 'border-rose-500' : 'border-transparent'}`} 
-                            value={formData.name} 
-                            onChange={e => { 
-                                const newName = e.target.value;
-                                setFormData({...formData, name: newName}); 
-                                if (errors.name && newName.trim()) setErrors(prev => ({...prev, name: null})); 
-                            }} 
-                        />
+                        <div className="relative">
+                            <input 
+                                ref={nameRef}
+                                type="text" 
+                                placeholder="What did you eat?" 
+                                className={`w-full bg-transparent font-black text-2xl sm:text-3xl outline-none placeholder:opacity-10 ${theme.textMain} text-center border-b-2 pb-2 transition-colors ${errors.name ? 'border-rose-500' : 'border-transparent'}`} 
+                                value={formData.name} 
+                                onChange={e => { 
+                                    const newName = e.target.value;
+                                    setFormData({...formData, name: newName}); 
+                                    if (errors.name && newName.trim()) setErrors(prev => ({...prev, name: null}));
+                                    if (foodMemory && newName.trim().length >= 2) {
+                                        const results = foodMemory.searchFoods(newName.trim());
+                                        setSuggestions(results);
+                                        setShowSuggestions(results.length > 0);
+                                    } else {
+                                        setShowSuggestions(false);
+                                    }
+                                }}
+                                onFocus={() => {
+                                    if (suggestions.length > 0) setShowSuggestions(true);
+                                }}
+                            />
+                            {/* Quick-fill Autocomplete Dropdown */}
+                            {showSuggestions && suggestions.length > 0 && (
+                                <div ref={suggestionsRef} className={`absolute left-0 right-0 top-full mt-2 ${theme.card} rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}>
+                                    <div className="flex items-center gap-2 px-4 py-2 border-b border-black/5">
+                                        <Zap size={12} className={theme.primaryText} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Quick Fill</span>
+                                    </div>
+                                    {suggestions.map((food, i) => (
+                                        <button
+                                            key={`${food.name}-${i}`}
+                                            type="button"
+                                            className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 transition-colors ${i > 0 ? 'border-t border-black/5' : ''}`}
+                                            onClick={() => applyFood(food)}
+                                        >
+                                            <div className="min-w-0">
+                                                <p className={`text-sm font-bold truncate ${theme.textMain}`}>{food.name}</p>
+                                                <p className="text-[10px] font-bold opacity-40">{food.calories} kcal &middot; {food.protein}p &middot; {food.carbs}c &middot; {food.fats}f</p>
+                                            </div>
+                                            {food.source === 'pantry' && <Heart size={12} className="text-rose-400 flex-shrink-0" fill="currentColor" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         {errors.name && <p className="text-rose-500 text-xs font-bold mt-2 animate-in fade-in slide-in-from-top-1 duration-200">{errors.name}</p>}
                     </div>
+
+                    {/* Common Meals & Pantry Quick-Add (only when creating new, not editing) */}
+                    {!editingId && foodMemory && !formData.name && (
+                        <div className="space-y-3 animate-in fade-in duration-300">
+                            {commonMeals.length > 0 && (
+                                <div className={`p-4 rounded-2xl ${theme.inputBg} shadow-inner space-y-3`}>
+                                    <div className="flex items-center gap-2">
+                                        <Zap size={12} className={theme.primaryText} />
+                                        <span className={`text-[10px] font-black uppercase tracking-widest opacity-40 ${theme.textMain}`}>Common {formData.type} meals</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {commonMeals.map((food, i) => (
+                                            <button key={`common-${food.name}-${i}`} type="button" onClick={() => applyFood(food)}
+                                                className={`px-3 py-2 rounded-xl ${theme.card} shadow-sm text-xs font-bold hover:scale-105 active:scale-95 transition-all ${theme.textMain} flex items-center gap-1.5`}>
+                                                <span>{food.name}</span>
+                                                <span className="opacity-30 text-[10px]">{food.calories}kcal</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {foodMemory.pantry.length > 0 && (
+                                <div className={`p-4 rounded-2xl ${theme.inputBg} shadow-inner space-y-3`}>
+                                    <button type="button" onClick={() => setShowPantry(!showPantry)} className="flex items-center gap-2 w-full">
+                                        <Heart size={12} className="text-rose-400" fill="currentColor" />
+                                        <span className={`text-[10px] font-black uppercase tracking-widest opacity-40 ${theme.textMain}`}>My Pantry ({foodMemory.pantry.length})</span>
+                                        <ChevronDown size={12} className={`ml-auto opacity-30 transition-transform ${showPantry ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {showPantry && (
+                                        <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                            {foodMemory.pantry.map((food, i) => (
+                                                <div key={`pantry-${food.name}-${i}`} className="flex items-center gap-0.5">
+                                                    <button type="button" onClick={() => applyFood(food)}
+                                                        className={`px-3 py-2 rounded-l-xl ${theme.card} shadow-sm text-xs font-bold hover:scale-105 active:scale-95 transition-all ${theme.textMain}`}>
+                                                        <span>{food.name}</span>
+                                                        <span className="opacity-30 text-[10px] ml-1.5">{food.calories}kcal</span>
+                                                    </button>
+                                                    <button type="button" onClick={() => foodMemory.removeFromPantry(food.name)}
+                                                        className={`px-1.5 py-2 rounded-r-xl ${theme.card} shadow-sm opacity-30 hover:opacity-100 hover:text-rose-500 transition-all`}>
+                                                        <X size={10} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <div className="flex justify-center">
                         <button 
@@ -457,12 +563,35 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                         />
                     </div>
 
-                    <button 
-                        type="submit" 
-                        className={`w-full py-4 sm:py-5 rounded-full ${theme.primary} text-white font-black text-lg sm:text-xl shadow-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.15em] sm:tracking-[0.2em]`}
-                    >
-                        {editingId ? "Update Meal" : "Save Entry"}
-                    </button>
+                    {/* Save to Pantry + Submit */}
+                    <div className="space-y-3">
+                        {foodMemory && formData.name.trim() && Number(formData.calories) > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (inPantry) {
+                                        foodMemory.removeFromPantry(formData.name);
+                                    } else {
+                                        foodMemory.addToPantry(formData);
+                                    }
+                                }}
+                                className={`w-full py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                                    inPantry 
+                                    ? 'bg-rose-100 text-rose-500 hover:bg-rose-200' 
+                                    : `${theme.inputBg} ${theme.textMain} opacity-60 hover:opacity-100`
+                                }`}
+                            >
+                                <Heart size={14} fill={inPantry ? "currentColor" : "none"} />
+                                {inPantry ? 'Remove from Pantry' : 'Save to Pantry'}
+                            </button>
+                        )}
+                        <button 
+                            type="submit" 
+                            className={`w-full py-4 sm:py-5 rounded-full ${theme.primary} text-white font-black text-lg sm:text-xl shadow-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.15em] sm:tracking-[0.2em]`}
+                        >
+                            {editingId ? "Update Meal" : "Save Entry"}
+                        </button>
+                    </div>
                 </div>
             </form>
         </Modal>

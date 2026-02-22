@@ -22,14 +22,19 @@ export function useStreak({ user, loading, profileData, getEntriesForDate, setDa
 
         if (lastLoginStr !== todayStr) {
             if (lastLoginStr === yesterdayStr) {
+                // Consecutive day — check if yesterday had entries
                 const yesterdayEntries = getEntriesForDate(yesterday, '', 'newest', []);
                 if (yesterdayEntries.length > 0) {
                     newStreak += 1;
                 } else {
-                    newStreak = 0;
+                    newStreak = 1; // Reset but count today
                 }
-            } else if (lastLoginStr && lastLoginStr !== yesterdayStr) {
-                newStreak = 0;
+            } else if (!lastLoginStr) {
+                // First ever login
+                newStreak = 1;
+            } else {
+                // Streak broken (gap > 1 day) — reset to 1 for today
+                newStreak = 1;
             }
 
             const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main');
