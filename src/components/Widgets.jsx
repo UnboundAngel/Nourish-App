@@ -299,16 +299,15 @@ export const WellnessTrends = ({ entries, theme }) => {
     let totalIssues = 0;
 
     entries.forEach(entry => {
-      const type = categories.find(c => c.toLowerCase() === (entry.type || '').toLowerCase());
-      if (type) {
-        data[type].total++;
-        data[type].calories += (entry.calories || 0);
-        const feeling = entry.feeling || 'good';
-        if (data[type].feelings[feeling] !== undefined) data[type].feelings[feeling]++;
-        if (!entry.finished || feeling === 'sick' || feeling === 'bloated') {
-          data[type].issues++;
-          totalIssues++;
-        }
+      const rawType = entry.type || entry.mealType || 'Snack';
+      const type = categories.find(c => c.toLowerCase() === rawType.toLowerCase()) || 'Snack';
+      data[type].total++;
+      data[type].calories += (entry.calories || 0);
+      const feeling = entry.feeling || 'good';
+      if (data[type].feelings[feeling] !== undefined) data[type].feelings[feeling]++;
+      if (!entry.finished || feeling === 'sick' || feeling === 'bloated') {
+        data[type].issues++;
+        totalIssues++;
       }
     });
 
