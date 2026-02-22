@@ -147,7 +147,8 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
     const handleBack = () => setStep(prev => prev - 1);
 
     const handleSkipSync = () => {
-        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        const trimmed = name.trim() || 'Friend';
+        const capitalizedName = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
         localStorage.setItem('nourish-user-name', capitalizedName);
         localStorage.setItem('nourish-device-only', 'true');
         // In device-only mode there is no Firebase user, so onSave (handleSaveProfile)
@@ -157,13 +158,15 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
 
     const handleAuthAction = async (e) => {
         e.preventDefault();
-        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        const trimmedAuth = name.trim() || 'Friend';
+        const capitalizedName = trimmedAuth.charAt(0).toUpperCase() + trimmedAuth.slice(1).toLowerCase();
         const success = await onAuth(e, email, password, authMode, capitalizedName, true);
         if (success) setStep(4);
     };
 
     const handleGoogleSignUp = async () => {
-        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        const trimmedGoogle = name.trim() || 'Friend';
+        const capitalizedName = trimmedGoogle.charAt(0).toUpperCase() + trimmedGoogle.slice(1).toLowerCase();
         const success = await onGoogle(capitalizedName, true);
         if (success) setStep(4);
     };

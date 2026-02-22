@@ -13,6 +13,19 @@ import {
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db, appId } from '../config/firebase';
 
+// Fire-and-forget welcome email — non-blocking, errors silently logged
+const sendWelcomeEmail = async (email, name) => {
+  try {
+    await fetch('/api/send-welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name }),
+    });
+  } catch (err) {
+    console.error('Welcome email failed (non-critical):', err);
+  }
+};
+
 export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setUserEmail, setDailySummary, setWeeklySummary, setDailyStreak, setWaterOz, setDailyTargets, setEditedTargets, setShowWelcome, setPushNotifications, setGoodnightMessages, setGoodmorningMessages, setReminderTimes, setWakeTime, setSleepTime, setTimezone, setWeight, setWeightUnit, setMealReminders, setHydrationReminders }) {
   const [user, setUser] = useState(null);
   const [profileData, setProfileData] = useState(null);
@@ -179,6 +192,8 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
               userCredential = await signInWithEmailAndPassword(auth, targetEmail, targetPassword);
           } else {
               userCredential = await createUserWithEmailAndPassword(auth, targetEmail, targetPassword);
+              // Send welcome email on signup (fire-and-forget)
+              sendWelcomeEmail(targetEmail, onboardingName);
           }
           
           if (onboardingName && userCredential.user) {
@@ -197,6 +212,12 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
           const provider = new GoogleAuthProvider();
           const userCredential = await signInWithPopup(auth, provider);
           
+          // Send welcome email if this is a new Google user (creationTime === lastSignInTime)
+          const meta = userCredential.user.metadata;
+          if (meta && meta.creationTime === meta.lastSignInTime) {
+              sendWelcomeEmail(userCredential.user.email, onboardingName);
+          }
+
           if (onboardingName && userCredential.user) {
               await saveProfile(onboardingName, userCredential.user.email, userCredential.user.uid);
           }
