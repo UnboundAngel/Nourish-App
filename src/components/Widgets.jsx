@@ -136,13 +136,13 @@ export const Widget = ({ children, className = "", title, icon: Icon, action, su
 );
 
 // Animated Water Bottle (Revamped)
-export const WaterBottle = ({ currentOz, goalOz, onAdd }) => {
+export const WaterBottle = ({ currentOz, goalOz, onAdd, theme }) => {
   const percentage = Math.min((currentOz / goalOz) * 100, 100);
   
   return (
     <div className="flex flex-col items-center gap-4">
         {/* Bottle Container */}
-        <div className="relative w-28 h-48 bg-blue-50/30 border-[6px] border-white/80 rounded-[3rem] shadow-xl overflow-hidden active:scale-95 transition-transform backdrop-blur-sm">
+        <div className={`relative w-28 h-48 ${theme?.inputBg || 'bg-blue-50/30'} border-[6px] border-current/10 rounded-[3rem] shadow-xl overflow-hidden active:scale-95 transition-transform backdrop-blur-sm`}>
             
             {/* Liquid Container */}
             <div 
@@ -163,7 +163,7 @@ export const WaterBottle = ({ currentOz, goalOz, onAdd }) => {
             
             {/* Percentage Text Overlay */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none drop-shadow-md z-10">
-                <span className={`text-2xl font-black ${percentage > 55 ? 'text-white' : 'text-blue-900/60'}`}>
+                <span className={`text-2xl font-black ${percentage > 55 ? 'text-white' : `${theme?.textMain || 'text-blue-900/60'} opacity-60`}`}>
                     {Math.round(percentage)}%
                 </span>
             </div>
@@ -172,7 +172,7 @@ export const WaterBottle = ({ currentOz, goalOz, onAdd }) => {
         {/* Add Button */}
         <button 
             onClick={() => onAdd(8)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold hover:bg-blue-200 transition-colors shadow-sm clickable"
+            className={`flex items-center gap-2 px-5 py-2.5 ${theme?.inputBg || 'bg-blue-100'} ${theme?.accent || 'text-blue-700'} rounded-full text-xs font-bold hover:brightness-90 transition-colors shadow-sm clickable`}
         >
             <Plus size={14} /> Add 8oz
         </button>
@@ -346,14 +346,14 @@ export const WellnessTrends = ({ entries, theme }) => {
                 </div>
               )}
               <div 
-                className={`w-full relative rounded-xl overflow-hidden bg-black/5 h-full flex items-end cursor-pointer transition-all ${isActive ? 'ring-2 ring-offset-1 ring-black/10' : ''}`}
+                className={`w-full relative rounded-xl overflow-hidden ${theme.inputBg} h-full flex items-end cursor-pointer transition-all ${isActive ? 'ring-2 ring-offset-1 ring-current/20' : ''}`}
                 onClick={() => setActiveBar(isActive ? null : cat)}
                 onMouseEnter={() => setActiveBar(cat)}
                 onMouseLeave={() => setActiveBar(null)}
               >
                 <div className="absolute bottom-0 w-full bg-transparent flex items-end justify-center h-full">
                     <div 
-                      className={`w-full ${theme.secondary} absolute bottom-0 transition-all duration-700 ease-out rounded-t-sm ${isActive ? 'opacity-80' : 'opacity-50'}`}
+                      className={`w-full ${theme.secondary} absolute bottom-0 transition-all duration-700 ease-out rounded-t-sm ${isActive ? 'opacity-100' : 'opacity-70'}`}
                       style={{ height: `${totalHeight}%` }}
                     >
                         <div 

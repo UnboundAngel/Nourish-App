@@ -79,7 +79,7 @@ export function MainContent({
                     <Droplet size={20} className="text-blue-500" />
                 </div>
                 
-                <WaterBottle currentOz={waterOz} goalOz={80} onAdd={handleAddWater} />
+                <WaterBottle currentOz={waterOz} goalOz={80} onAdd={handleAddWater} theme={theme} />
                 
                 <div className="w-full mt-8 space-y-4">
                     <div className="flex justify-between items-end">
@@ -267,14 +267,14 @@ export function MainContent({
                             <div className="mt-4 pt-3 border-t border-black/5 flex gap-2 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 <button 
                                     onClick={(e) => handleToggleFinish(e, entry)} 
-                                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold ${entry.finished ? 'text-green-600 bg-green-50' : 'text-slate-500 bg-slate-100'} hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-1.5`}
+                                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold ${entry.finished ? `text-emerald-500 ${theme.inputBg}` : `${theme.textMain} opacity-50 ${theme.inputBg}`} hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-1.5`}
                                 >
                                     {entry.finished ? <CheckCircle size={14} /> : <Circle size={14} />}
                                     <span>{entry.finished ? 'Finished' : 'Mark Done'}</span>
                                 </button>
                                 <button 
                                     onClick={(e) => handleDelete(e, entry.id)} 
-                                    className="py-2 px-3 rounded-xl text-xs font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-1.5"
+                                    className={`py-2 px-3 rounded-xl text-xs font-bold text-rose-500 ${theme.inputBg} hover:brightness-90 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-1.5`}
                                 >
                                     <Trash2 size={14}/>
                                     <span>Delete</span>

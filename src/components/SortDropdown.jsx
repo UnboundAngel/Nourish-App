@@ -86,7 +86,7 @@ export const SortDropdown = ({ value, onChange, theme }) => {
               className={`block w-full text-left px-3 py-1.5 cursor-pointer theme-transition
                 ${option.value === value ? `font-bold ${theme.primaryText}` : `${theme.textMain}`}
                 ${index === highlightedIndex ? `outline-none ring-2 ring-${theme.accent} rounded-lg` : ''}
-                hover:bg-white/40`}
+                hover:${theme.inputBg}`}
               onClick={() => {
                 onChange(option.value);
                 setIsOpen(false);

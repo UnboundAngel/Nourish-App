@@ -50,7 +50,7 @@ export function SettingsModal({
                 <p className={`font-bold text-lg ${theme.textMain} theme-transition`}>{user?.email || 'Anonymous User'}</p>
                 
                 {!user || user.isAnonymous ? (
-                    <button onClick={() => setAuthMode('login')} className="flex items-center gap-2 text-sm font-bold text-green-500 hover:text-green-600 clickable">
+                    <button onClick={() => setAuthMode('login')} className={`flex items-center gap-2 text-sm font-bold ${theme.accent} hover:brightness-90 clickable`}>
                         <LogIn size={16} /> Log In / Sign Up
                     </button>
                 ) : (

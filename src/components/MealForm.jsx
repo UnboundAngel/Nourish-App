@@ -235,7 +235,7 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                                 <span className="text-xl font-black opacity-20">:</span>
                                 <input type="number" min="0" max="59" className="no-native-spinners w-12 bg-transparent font-black text-4xl outline-none text-center tabular-nums" value={timeParts.m} onChange={e => handleTimeChange('minute', e.target.value)} />
                             </div>
-                            <button type="button" onClick={toggleAMPM} className={`px-5 py-2 rounded-xl text-xs font-black uppercase transition-all ${timeParts.ampm === 'PM' ? `${theme.primary} text-white` : `bg-white/10 opacity-60`}`}>{timeParts.ampm}</button>
+                            <button type="button" onClick={toggleAMPM} className={`px-5 py-2 rounded-xl text-xs font-black uppercase transition-all ${timeParts.ampm === 'PM' ? `${theme.primary} text-white` : `${theme.inputBg} opacity-60`}`}>{timeParts.ampm}</button>
                         </div>
                     )}
                 </div>  
@@ -350,7 +350,7 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                             <button 
                                 type="button" 
                                 onClick={() => setFormData({...formData, finished: !formData.finished})} 
-                                className={`w-full sm:w-auto px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${formData.finished ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-200 text-slate-500'}`}
+                                className={`w-full sm:w-auto px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${formData.finished ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : `${theme.inputBg} ${theme.textMain} opacity-50`}`}
                             >
                                 {formData.finished ? 'Clean Plate' : 'Leftovers'}
                             </button>

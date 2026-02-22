@@ -379,7 +379,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                             
                             {!isEmailForm ? (
                                 <div className="space-y-4 max-w-md mx-auto">
-                                    <button onClick={handleGoogleSignUp} className="w-full py-3 sm:py-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-3 hover:bg-slate-50 hover:scale-105 active:scale-95 transition-all shadow-sm">
+                                    <button onClick={handleGoogleSignUp} className={`w-full py-3 sm:py-4 ${theme.card} border-2 ${theme.border} rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-3 hover:brightness-95 hover:scale-105 active:scale-95 transition-all shadow-sm ${theme.textMain}`}>
                                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" /> Continue with Google
                                     </button>
                                     

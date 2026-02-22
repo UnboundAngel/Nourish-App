@@ -61,7 +61,7 @@ export function Header({
                             {unreadCount > 0 && (
                               <button 
                                 onClick={handleMarkAllAsRead}
-                                className="flex items-center gap-1 text-[10px] font-bold text-blue-500 hover:text-blue-600 active:scale-95 transition-all"
+                                className={`flex items-center gap-1 text-[10px] font-bold ${theme.accent} hover:brightness-90 active:scale-95 transition-all`}
                               >
                                 <CheckCheck size={12} /> Mark all read
                               </button>
@@ -85,7 +85,7 @@ export function Header({
                                           !n.isRead ? `${theme.inputBg}` : 'hover:bg-black/[0.02]'
                                         }`}
                                       >
-                                        <div className={`p-1.5 rounded-lg flex-shrink-0 mt-0.5 ${!n.isRead ? 'bg-blue-100 text-blue-500' : 'bg-black/5 opacity-40'}`}>
+                                        <div className={`p-1.5 rounded-lg flex-shrink-0 mt-0.5 ${!n.isRead ? `${theme.inputBg} ${theme.accent}` : `${theme.inputBg} opacity-40`}`}>
                                           <Icon size={14} />
                                         </div>
                                         <div className="flex-1 min-w-0">

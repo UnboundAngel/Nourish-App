@@ -44,7 +44,7 @@ export const Toast = ({ id, message, type, duration, onDismiss, theme }) => {
 
   return (
     <div 
-      className={`relative bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-200 ${
+      className={`relative ${theme.card} rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-200 ${
         isExiting ? 'opacity-0 translate-x-8 scale-95' : 'opacity-100 translate-x-0 scale-100'
       } animate-in slide-in-from-right-8 fade-in duration-200`}
       style={{ minWidth: '320px', maxWidth: '420px' }}

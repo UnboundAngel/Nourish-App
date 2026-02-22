@@ -344,7 +344,7 @@ export function GardenBadge({ dailyStreak, size = 'md' }) {
     <div className={`${sizes[size]} rounded-2xl bg-gradient-to-br ${tier.gradient} flex items-center justify-center shadow-lg relative`}>
       <span>{tier.icon}</span>
       {dailyStreak > 0 && (
-        <span className="absolute -bottom-1 -right-1 bg-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center shadow-sm text-gray-800">
+        <span className={`absolute -bottom-1 -right-1 ${theme.card} text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center shadow-sm ${theme.textMain}`}>
           {dailyStreak}
         </span>
       )}
