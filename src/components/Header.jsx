@@ -28,7 +28,7 @@ export function Header({
   unreadCount,
 }) {
   return (
-    <header className={`sticky top-0 z-20 backdrop-blur-xl shadow-sm px-4 md:px-8 py-3 md:py-4 flex items-center justify-between theme-transition`}>
+    <header className={`sticky top-0 z-20 backdrop-blur-xl shadow-sm px-4 md:px-8 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 md:py-4 flex items-center justify-between theme-transition`}>
         <div className="flex items-center gap-3 min-w-0">
             <div className="min-w-0">
                 <h2 className={`text-base md:text-xl font-black ${theme.textMain} theme-transition leading-tight truncate`}>
