@@ -12,6 +12,9 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         time: '12:00', finished: true, feeling: 'good', note: '', tags: ''
     });
     const [isChangingTime, setIsChangingTime] = useState(false);
+    const [editHour, setEditHour] = useState('');
+    const [editMinute, setEditMinute] = useState('');
+    const [editAmpm, setEditAmpm] = useState('AM');
     const [errors, setErrors] = useState({});
     const [showScrollHint, setShowScrollHint] = useState(true);
     const [suggestions, setSuggestions] = useState([]);
@@ -116,19 +119,58 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         setFormData({ ...updatedData, calories: newCalories.toString() });
     };
 
-    const handleTimeChange = (type, val) => {
-        let [h, m] = (formData.time || "00:00").split(':');
-        if (type === 'hour') h = val.padStart(2, '0');
-        if (type === 'minute') m = val.padStart(2, '0');
-        setFormData({ ...formData, time: `${h}:${m}` });
+    // Commit local time editor state back to formData.time (24h format)
+    const commitTime = useCallback((h, m, ampm) => {
+        let hour = parseInt(h) || 0;
+        const minute = Math.max(0, Math.min(59, parseInt(m) || 0));
+        // Convert 12h display to 24h
+        if (ampm === 'AM') {
+            if (hour === 12) hour = 0;
+            else hour = Math.max(0, Math.min(11, hour));
+        } else {
+            if (hour === 12) hour = 12;
+            else hour = Math.max(1, Math.min(11, hour)) + 12;
+        }
+        setFormData(prev => ({ ...prev, time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}` }));
+    }, []);
+
+    // Sync local editor state FROM formData when time picker opens
+    const openTimePicker = useCallback(() => {
+        const timeStr = formData.time || '12:00';
+        let [h, m] = timeStr.split(':');
+        let hours = parseInt(h) || 0;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        let displayH = hours % 12;
+        if (displayH === 0) displayH = 12;
+        setEditHour(displayH.toString());
+        setEditMinute(m || '00');
+        setEditAmpm(ampm);
+        setIsChangingTime(true);
+    }, [formData.time]);
+
+    const closeTimePicker = useCallback(() => {
+        commitTime(editHour, editMinute, editAmpm);
+        setIsChangingTime(false);
+    }, [editHour, editMinute, editAmpm, commitTime]);
+
+    const handleHourBlur = () => {
+        let h = parseInt(editHour) || 0;
+        h = Math.max(1, Math.min(12, h));
+        setEditHour(h.toString());
+        commitTime(h.toString(), editMinute, editAmpm);
+    };
+
+    const handleMinuteBlur = () => {
+        let m = parseInt(editMinute) || 0;
+        m = Math.max(0, Math.min(59, m));
+        setEditMinute(m.toString().padStart(2, '0'));
+        commitTime(editHour, m.toString(), editAmpm);
     };
 
     const toggleAMPM = () => {
-        let [h, m] = (formData.time || "00:00").split(':');
-        let hours = parseInt(h);
-        if (hours < 12) hours += 12;
-        else hours -= 12;
-        setFormData({ ...formData, time: `${hours.toString().padStart(2, '0')}:${m}` });
+        const newAmpm = editAmpm === 'AM' ? 'PM' : 'AM';
+        setEditAmpm(newAmpm);
+        commitTime(editHour, editMinute, newAmpm);
     };
 
     const handleCaloriesTouchStart = (e) => {
@@ -188,14 +230,6 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         };
     }, [formData.protein, formData.carbs, formData.fats]);
 
-    const timeParts = useMemo(() => {
-        const timeStr = formData.time || "00:00";
-        let [h, m] = timeStr.split(':');
-        let hours = parseInt(h) || 0;
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        let displayHours = hours % 12 || 12;
-        return { h: displayHours.toString(), m: m || "00", ampm };
-    }, [formData.time]);
 
     const formatTimeDisplay = (timeString) => {
         if (!timeString) return '';
@@ -325,23 +359,23 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                     <div className="flex justify-center">
                         <button 
                             type="button" 
-                            onClick={() => setIsChangingTime(!isChangingTime)}
+                            onClick={() => isChangingTime ? closeTimePicker() : openTimePicker()}
                             className={`px-6 py-2.5 rounded-full ${theme.inputBg} shadow-sm flex items-center gap-3 transition-all hover:scale-105`}
                         >
                             <Clock size={16} className="opacity-40" />
                             <span className="text-xs font-black tabular-nums">{formatTimeDisplay(formData.time)}</span>
-                            <span className={`text-[10px] font-black uppercase ${theme.primaryText} opacity-60`}>{isChangingTime ? 'Close' : 'Edit'}</span>
+                            <span className={`text-[10px] font-black uppercase ${theme.primaryText} opacity-60`}>{isChangingTime ? 'Done' : 'Edit'}</span>
                         </button>
                     </div>
 
                     {isChangingTime && (
                         <div className="bg-black/5 p-6 rounded-[2.5rem] flex items-center justify-center gap-8 animate-in fade-in slide-in-from-top-4 duration-500 shadow-inner">
                             <div className="flex items-center gap-2">
-                                <input type="number" min="1" max="12" className="no-native-spinners w-12 bg-transparent font-black text-4xl outline-none text-center tabular-nums" value={timeParts.h} onChange={e => handleTimeChange('hour', e.target.value)} />
+                                <input type="text" inputMode="numeric" pattern="[0-9]*" className={`w-14 bg-transparent font-black text-4xl outline-none text-center tabular-nums ${theme.textMain}`} value={editHour} onChange={e => setEditHour(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onBlur={handleHourBlur} />
                                 <span className="text-xl font-black opacity-20">:</span>
-                                <input type="number" min="0" max="59" className="no-native-spinners w-12 bg-transparent font-black text-4xl outline-none text-center tabular-nums" value={timeParts.m} onChange={e => handleTimeChange('minute', e.target.value)} />
+                                <input type="text" inputMode="numeric" pattern="[0-9]*" className={`w-14 bg-transparent font-black text-4xl outline-none text-center tabular-nums ${theme.textMain}`} value={editMinute} onChange={e => setEditMinute(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} onBlur={handleMinuteBlur} />
                             </div>
-                            <button type="button" onClick={toggleAMPM} className={`px-5 py-2 rounded-xl text-xs font-black uppercase transition-all ${timeParts.ampm === 'PM' ? `${theme.primary} text-white` : `${theme.inputBg} opacity-60`}`}>{timeParts.ampm}</button>
+                            <button type="button" onClick={toggleAMPM} className={`px-5 py-2.5 rounded-xl text-sm font-black uppercase transition-all active:scale-95 ${editAmpm === 'PM' ? `${theme.primary} text-white` : `${theme.inputBg} ${theme.textMain} opacity-60`}`}>{editAmpm}</button>
                         </div>
                     )}
                 </div>  
@@ -374,19 +408,18 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                             )}
                             <input
                                 ref={caloriesInputRef}
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 placeholder="0"
                                 className={`no-native-spinners bg-transparent font-black text-5xl sm:text-7xl outline-none text-center tabular-nums w-36 sm:w-44 border-b-2 pb-1 transition-colors cursor-ns-resize ${errors.calories ? 'border-rose-500' : 'border-transparent'}`}
-                                style={{ color: 'inherit', WebkitAppearance: 'none', margin: 0, MozAppearance: 'textfield' }}
+                                style={{ color: 'inherit' }}
                                 value={formData.calories}
                                 onChange={e => { 
-                                    const newCals = e.target.value;
+                                    const newCals = e.target.value.replace(/[^0-9]/g, '');
                                     setFormData({...formData, calories: newCals}); 
                                     if (errors.calories && Number(newCals) > 0) setErrors(prev => ({...prev, calories: null})); 
                                 }}
-                                onTouchStart={handleCaloriesTouchStart}
-                                onTouchMove={handleCaloriesTouchMove}
-                                onTouchEnd={handleCaloriesTouchEnd}
                                 onFocus={() => setShowScrollHint(false)}
                             />
                             <div className="text-[10px] font-black opacity-30 uppercase tracking-[0.4em] mt-1">Calories Total</div>
@@ -411,11 +444,12 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                                     <div className={`flex flex-col items-center ${bgClass} rounded-full p-1 border border-black/5`}>
                                         <button type="button" onClick={() => handleIncrementMacro(macro)} className={`p-2 hover:scale-125 transition-all ${colorClass}`}><ChevronUp size={18} strokeWidth={3}/></button>
                                         <input
-                                            type="number"
-                                            className="no-native-spinners bg-transparent w-12 text-center font-black text-xl outline-none tabular-nums"
-                                            style={{ WebkitAppearance: 'none', margin: 0, MozAppearance: 'textfield' }}
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            className="bg-transparent w-12 text-center font-black text-xl outline-none tabular-nums"
                                             value={formData[macro]}
-                                            onChange={(e) => handleMacroChange(macro, e.target.value)}
+                                            onChange={(e) => handleMacroChange(macro, e.target.value.replace(/[^0-9]/g, ''))}
                                         />
                                         <button type="button" onClick={() => handleDecrementMacro(macro)} className={`p-2 hover:scale-125 transition-all ${colorClass}`}><ChevronDown size={18} strokeWidth={3}/></button>
                                     </div>

@@ -1,10 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
 
 export function useStreak({ user, loading, profileData, getEntriesForDate, setDailyStreak }) {
+  // Use a ref so the dep array stays a fixed size across renders
+  const getEntriesRef = useRef(getEntriesForDate);
+  useEffect(() => { getEntriesRef.current = getEntriesForDate; }, [getEntriesForDate]);
+
   useEffect(() => {
-    if (!user || loading || !profileData) return;
+    if (!user || loading || !profileData || !getEntriesRef.current) return;
 
     const checkStreak = async () => {
         // Count consecutive days with entries, starting from today and going backward
@@ -13,7 +17,7 @@ export function useStreak({ user, loading, profileData, getEntriesForDate, setDa
         for (let i = 0; i < 365; i++) {
             const checkDate = new Date(now);
             checkDate.setDate(now.getDate() - i);
-            const dayEntries = getEntriesForDate(checkDate, '', 'newest', []);
+            const dayEntries = getEntriesRef.current(checkDate, '', 'newest', []);
             if (dayEntries.length > 0) {
                 streak++;
             } else {
@@ -37,5 +41,5 @@ export function useStreak({ user, loading, profileData, getEntriesForDate, setDa
     };
     
     checkStreak(); 
-  }, [user, loading, profileData, getEntriesForDate, setDailyStreak]);
+  }, [user, loading, profileData, setDailyStreak]);
 }
