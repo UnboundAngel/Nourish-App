@@ -12,6 +12,7 @@ const SettingsModal = lazy(() => import('./components/SettingsModal').then(m => 
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { TrendsPage } from './components/TrendsPage';
 import { NourishGarden } from './components/NourishGarden';
+import { ToastContainer } from './components/ToastContainer';
 import { useSettings } from './hooks/useSettings';
 import { useAuth } from './hooks/useAuth';
 import { useEntries } from './hooks/useEntries';
@@ -21,6 +22,8 @@ import { useNotifications } from './hooks/useNotifications';
 import { useWhisper } from './hooks/useWhisper';
 import { useInsights } from './hooks/useInsights';
 import { useUpdateCheck } from './hooks/useUpdateCheck';
+import { useToast } from './hooks/useToast';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { formatTime } from './utils/helpers';
 
 export default function NourishApp() {
@@ -120,6 +123,12 @@ export default function NourishApp() {
   // --- Update Check (checks every 60s if a new deploy is available) ---
   const { updateAvailable, refresh } = useUpdateCheck();
 
+  // --- Toast Notifications ---
+  const { toasts, showToast, dismissToast } = useToast();
+
+  // --- Push Notifications ---
+  const { fcmToken, permissionStatus, requestPermission, unregisterFCMToken } = usePushNotifications({ user, showToast });
+
   // --- Wrapped Settings Handlers (pass live user) ---
   const handleThemeChange = (newTheme) => rawHandleThemeChange(newTheme, user);
   const handleTimeFormatChange = (val) => rawHandleTimeFormatChange(val, user);
@@ -127,8 +136,8 @@ export default function NourishApp() {
   const handleSaveTargets = (newTargets) => rawHandleSaveTargets(newTargets, user);
 
   // --- Wrapped Auth Handlers ---
-  const handleSaveProfile = async (name, newEmail, explicitUid) => {
-    await handleSaveProfileFull(name, newEmail, explicitUid, { dailyTargets, waterOz, dailyStreak });
+  const handleSaveProfile = async (name, newEmail, weight, weightUnit, wakeTime, sleepTime, explicitUid) => {
+    await handleSaveProfileFull(name, newEmail, explicitUid, { dailyTargets, waterOz, dailyStreak, weight, weightUnit, wakeTime, sleepTime });
   };
 
   const handleAuth = async (e, customEmail, customPassword, customMode, onboardingName, isQuiet) => {
@@ -146,7 +155,7 @@ export default function NourishApp() {
   const openNewEntryModal = () => rawOpenNewEntryModal(setIsModalOpen);
 
   const handleSaveEntry = async (formData) => {
-    await rawHandleSaveEntry(formData, { dailyStreak, setDailyStreak, setShowStreakCelebration, setIsModalOpen });
+    await rawHandleSaveEntry(formData, { dailyStreak, setDailyStreak, setShowStreakCelebration, setIsModalOpen, showToast });
   };
 
   // --- Loading Screen ---
@@ -441,6 +450,13 @@ export default function NourishApp() {
             userName={userName}
         />
       )}
+
+      {/* Toast Notifications */}
+      <ToastContainer 
+        toasts={toasts}
+        onDismiss={dismissToast}
+        theme={theme}
+      />
 
     </div>
   );

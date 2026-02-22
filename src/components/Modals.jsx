@@ -85,6 +85,12 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
     const [isEmailForm, setIsEmailForm] = useState(false);
     const [authMode, setAuthMode] = useState('signup'); // 'signup' or 'login'
     
+    // Onboarding questionnaire state
+    const [weight, setWeight] = useState('');
+    const [weightUnit, setWeightUnit] = useState('lbs');
+    const [wakeTime, setWakeTime] = useState('07:00');
+    const [sleepTime, setSleepTime] = useState('23:00');
+    
     const [showIdleHint, setShowIdleHint] = useState(false);
     const [isIntroExiting, setIsIntroExiting] = useState(false);
     const [shapeIndex, setShapeIndex] = useState(0);
@@ -153,13 +159,13 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
         e.preventDefault();
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
         const success = await onAuth(e, email, password, authMode, capitalizedName, true);
-        if (success) setStep(3);
+        if (success) setStep(4);
     };
 
     const handleGoogleSignUp = async () => {
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
         const success = await onGoogle(capitalizedName, true);
-        if (success) setStep(3);
+        if (success) setStep(4);
     };
 
     return (
@@ -271,7 +277,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                 <div className={`relative w-full max-w-2xl ${theme.card} rounded-[2rem] sm:rounded-[2.5rem] md:rounded-[3rem] shadow-2xl p-5 sm:p-8 md:p-12 ${theme.textMain} theme-transition overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-700`}>
                     
                     <div className="absolute top-0 left-0 right-0 h-1.5 flex gap-1 px-1 pt-1">
-                        {[1, 2, 3, 4].map(i => (
+                        {[1, 2, 3, 4, 5].map(i => (
                             <div key={i} className={`flex-1 h-full rounded-full transition-all duration-500 ${step >= i ? theme.primary : 'bg-black/5'}`}></div>
                         ))}
                     </div>
@@ -285,7 +291,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                                 <button onClick={handleNext} disabled={!name.trim()} className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2`} > Continue <ArrowRight size={20} /> </button>
                                 
                                 <button 
-                                    onClick={() => { setAuthMode('login'); setStep(2); }}
+                                    onClick={() => { setAuthMode('login'); setStep(3); }}
                                     className="text-sm font-bold opacity-40 hover:opacity-100 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 mx-auto"
                                 >
                                     Already have an account? Sign In
@@ -295,6 +301,78 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                     )}
 
                     {step === 2 && (
+                        <div className="text-center animate-in slide-in-from-right-8 duration-500">
+                            <h2 className={`text-2xl sm:text-3xl font-black ${theme.primaryText} mb-2 sm:mb-4 tracking-tight`}>Tell us about yourself</h2>
+                            <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8 max-w-md mx-auto">Help us personalize your nutrition goals and reminder schedule.</p>
+                            
+                            <div className="space-y-5 sm:space-y-6 max-w-md mx-auto">
+                                {/* Weight Input (Optional) */}
+                                <div className="text-left">
+                                    <label className="text-xs font-bold uppercase opacity-40 mb-2 block">Weight (Optional)</label>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="number" 
+                                            placeholder="150" 
+                                            className={`flex-1 p-4 ${theme.inputBg} rounded-2xl font-bold outline-none border-2 border-transparent focus:border-current transition-all`}
+                                            value={weight}
+                                            onChange={e => setWeight(e.target.value)}
+                                        />
+                                        <div className={`flex gap-1 ${theme.inputBg} p-1 rounded-xl`}>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setWeightUnit('lbs')}
+                                                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${weightUnit === 'lbs' ? `${theme.primary} text-white` : 'opacity-40'}`}
+                                            >
+                                                lbs
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setWeightUnit('kg')}
+                                                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${weightUnit === 'kg' ? `${theme.primary} text-white` : 'opacity-40'}`}
+                                            >
+                                                kg
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Wake Time */}
+                                <div className="text-left">
+                                    <label className="text-xs font-bold uppercase opacity-40 mb-2 block">When do you wake up?</label>
+                                    <input 
+                                        type="time" 
+                                        className={`w-full p-4 ${theme.inputBg} rounded-2xl font-bold outline-none border-2 border-transparent focus:border-current transition-all`}
+                                        value={wakeTime}
+                                        onChange={e => setWakeTime(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Sleep Time */}
+                                <div className="text-left">
+                                    <label className="text-xs font-bold uppercase opacity-40 mb-2 block">When do you go to sleep?</label>
+                                    <input 
+                                        type="time" 
+                                        className={`w-full p-4 ${theme.inputBg} rounded-2xl font-bold outline-none border-2 border-transparent focus:border-current transition-all`}
+                                        value={sleepTime}
+                                        onChange={e => setSleepTime(e.target.value)}
+                                    />
+                                </div>
+
+                                <button 
+                                    onClick={handleNext} 
+                                    className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}
+                                >
+                                    Continue <ArrowRight size={20} />
+                                </button>
+                            </div>
+
+                            <button onClick={handleBack} className="mt-6 text-sm font-bold opacity-40 hover:opacity-100 flex items-center gap-1 mx-auto">
+                                <ChevronLeft size={16} /> Back
+                            </button>
+                        </div>
+                    )}
+
+                    {step === 3 && (
                         <div className="text-center animate-in slide-in-from-right-8 duration-500">
                             <h2 className={`text-2xl sm:text-3xl font-black ${theme.textMain} mb-2 sm:mb-4 tracking-tight`}>Cloud or Local?</h2>
                             <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8 max-w-sm mx-auto text-balance">Choose how you'd like to save your nutrition data.</p>
@@ -350,7 +428,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                         </div>
                     )}
 
-                    {step === 3 && (
+                    {step === 4 && (
                         <div className="text-center animate-in slide-in-from-right-8 duration-500">
                             <h2 className={`text-2xl sm:text-3xl font-black ${theme.textMain} mb-2 sm:mb-4 tracking-tight`}>Pick your vibe</h2>
                             <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8">Select a theme that matches your style.</p>
@@ -367,7 +445,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                         </div>
                     )}
 
-                    {step === 4 && (
+                    {step === 5 && (
                         <div className="text-center animate-in slide-in-from-right-8 duration-500">
                             <h2 className={`text-2xl sm:text-3xl font-black ${theme.textMain} mb-2 sm:mb-4 tracking-tight`}>Daily Goals</h2>
                             <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8">Set your baseline nutritional targets.</p>
@@ -377,7 +455,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                                 <div className={`p-3 sm:p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[9px] sm:text-[10px] font-bold uppercase opacity-40 block mb-1">Carbs (g)</label> <input type="number" className="bg-transparent w-full text-xl sm:text-2xl font-black outline-none text-orange-600" value={dailyTargets.carbs} onChange={e => onTargetsChange({...dailyTargets, carbs: Number(e.target.value)})} /> </div>
                                 <div className={`p-3 sm:p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[9px] sm:text-[10px] font-bold uppercase opacity-40 block mb-1">Fats (g)</label> <input type="number" className="bg-transparent w-full text-xl sm:text-2xl font-black outline-none text-blue-600" value={dailyTargets.fats} onChange={e => onTargetsChange({...dailyTargets, fats: Number(e.target.value)})} /> </div>
                             </div>
-                            <button onClick={() => onSave(name, email)} className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}> Start My Journey <ArrowRight size={20} /> </button>
+                            <button onClick={() => onSave(name, email, weight, weightUnit, wakeTime, sleepTime)} className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}> Start My Journey <ArrowRight size={20} /> </button>
                         </div>
                     )}
                 </div>

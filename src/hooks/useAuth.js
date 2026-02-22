@@ -115,7 +115,7 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSaveProfileFull = async (name, newEmail, explicitUid, { dailyTargets, waterOz, dailyStreak }) => {
+  const handleSaveProfileFull = async (name, newEmail, explicitUid, { dailyTargets, waterOz, dailyStreak, weight, weightUnit, wakeTime, sleepTime }) => {
       const targetUid = explicitUid || user?.uid;
       if (!targetUid) return;
 
@@ -125,12 +125,21 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
 
       const capitalizedName = finalName.charAt(0).toUpperCase() + finalName.slice(1).toLowerCase();
       const docRef = doc(db, 'artifacts', appId, 'users', targetUid, 'profile', 'main');
+      
+      // Auto-detect timezone
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
       await setDoc(docRef, { 
           displayName: capitalizedName, 
           email: newEmail,
           dailyTargets: dailyTargets,
           waterOz: waterOz,
-          dailyStreak: dailyStreak
+          dailyStreak: dailyStreak,
+          weight: weight ? Number(weight) : null,
+          weightUnit: weightUnit || 'lbs',
+          wakeTime: wakeTime || '07:00',
+          sleepTime: sleepTime || '23:00',
+          timezone: timezone
       }, { merge: true });
       setUserName(capitalizedName);
       localStorage.setItem('nourish-user-name', capitalizedName);

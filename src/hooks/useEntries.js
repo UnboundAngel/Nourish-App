@@ -158,7 +158,7 @@ export function useEntries({ user }) {
       setIsModalOpen(true);
   };
 
-  const handleSaveEntry = useCallback(async (formData, { dailyStreak, setDailyStreak, setShowStreakCelebration, setIsModalOpen }) => {
+  const handleSaveEntry = useCallback(async (formData, { dailyStreak, setDailyStreak, setShowStreakCelebration, setIsModalOpen, showToast }) => {
     if (!formData.name) return;
 
     const entryData = { 
@@ -199,7 +199,15 @@ export function useEntries({ user }) {
         }
         // Re-fetch to sync local state with Firestore
         fetchEntries();
-      } catch (error) { console.error(error); }
+        if (showToast) {
+          showToast(editingId ? 'Meal updated! 🌱' : 'Meal logged! 🌱', 'success');
+        }
+      } catch (error) { 
+        console.error(error);
+        if (showToast) {
+          showToast('Failed to save meal. Changes saved locally.', 'error');
+        }
+      }
     } else {
       const newEntry = {
         ...entryData,
@@ -231,6 +239,9 @@ export function useEntries({ user }) {
 
       setEntries(updatedEntries);
       saveEntries(updatedEntries);
+      if (showToast) {
+        showToast(editingId ? 'Meal updated! 🌱' : 'Meal logged! 🌱', 'success');
+      }
     }
     
     setIsModalOpen(false);
