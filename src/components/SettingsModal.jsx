@@ -91,7 +91,7 @@ export function SettingsModal({
                             {authMode === 'login' ? 'Log In' : 'Create Account'}
                         </button>
                     </form>
-                    <button onClick={handleGoogleLogin} className={`w-full py-3 bg-white shadow-sm rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-50 active:scale-95 ${theme.textMain} theme-transition`}>
+                    <button onClick={handleGoogleLogin} className={`w-full py-3 ${theme.inputBg} shadow-sm rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:brightness-95 active:scale-95 ${theme.textMain} theme-transition`}>
                         <span className="text-lg">G</span> Continue with Google
                     </button>
                     {authMode === 'login' && (

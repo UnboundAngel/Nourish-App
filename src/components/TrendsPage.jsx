@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { 
   TrendingUp, TrendingDown, Minus, BarChart3, PieChart, Activity,
-  Droplet, Flame, Target, Heart,
+  Droplet, Flame, Target, Heart, Coffee,
   ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { FEELINGS } from '../utils/feelings';
