@@ -67,27 +67,60 @@ const PLANT_POSITIONS = [
   {x:40,y:20},{x:60,y:70},{x:20,y:40},{x:80,y:35},{x:50,y:10},
 ];
 
+// --- Static "Past Forest" for days older than the current month (LOD optimisation) ---
+function PastForest() {
+  return (
+    <g opacity="0.7" aria-label="Past forest">
+      {/* A dense cluster of static trees representing all older streak days */}
+      <ellipse cx="200" cy="128" rx="155" ry="38" fill="#4a8c3f" opacity="0.18" />
+      {/* Back row */}
+      <circle cx="80"  cy="108" r="18" fill="#065F46" />
+      <circle cx="120" cy="100" r="22" fill="#047857" />
+      <circle cx="165" cy="96"  r="26" fill="#059669" />
+      <circle cx="210" cy="93"  r="28" fill="#065F46" />
+      <circle cx="255" cy="96"  r="26" fill="#047857" />
+      <circle cx="300" cy="100" r="22" fill="#059669" />
+      <circle cx="335" cy="108" r="18" fill="#065F46" />
+      {/* Front row */}
+      <circle cx="100" cy="118" r="16" fill="#16A34A" />
+      <circle cx="145" cy="112" r="20" fill="#22C55E" />
+      <circle cx="195" cy="108" r="24" fill="#16A34A" />
+      <circle cx="240" cy="112" r="20" fill="#22C55E" />
+      <circle cx="285" cy="118" r="16" fill="#16A34A" />
+      {/* Trunks */}
+      {[80,120,165,210,255,300,335,100,145,195,240,285].map((cx, i) => (
+        <rect key={i} x={cx - 3} y={126} width={6} height={14} rx={2} fill="#78350F" opacity="0.6" />
+      ))}
+    </g>
+  );
+}
+
 // --- 3D Floating Island Garden ---
-function GardenIsland({ dailyStreak, theme }) {
-  const visiblePlants = useMemo(() => {
-    const plants = [];
-    const maxPlants = Math.min(dailyStreak, 40);
-    for (let i = 0; i < maxPlants; i++) {
-      const age = dailyStreak - i;
+// gardenDay: position within the current 30-day garden cycle (1–30).
+// At 30 the garden is full. On day 31 it resets to 1 and grows again.
+// dailyStreak is the real streak shown in the badge — never reset.
+function GardenIsland({ gardenDay }) {
+  const isFullGarden = gardenDay >= 30;
+
+  const plants = useMemo(() => {
+    if (isFullGarden) return []; // full garden uses PastForest only
+    const list = [];
+    for (let i = 0; i < gardenDay; i++) {
+      const age = gardenDay - i; // age within this cycle
       let Comp = Seedling;
       if (age >= 30) Comp = AppleTree;
       else if (age >= 14) Comp = PineTree;
       else if (age >= 7) Comp = Flower;
       else if (age >= 3) Comp = Bush;
-      plants.push({
+      list.push({
         id: i, age,
         pos: PLANT_POSITIONS[i % PLANT_POSITIONS.length],
         Component: Comp,
         isNew: age === 1,
       });
     }
-    return plants.sort((a, b) => a.pos.y - b.pos.y);
-  }, [dailyStreak]);
+    return list.sort((a, b) => a.pos.y - b.pos.y);
+  }, [gardenDay, isFullGarden]);
 
   return (
     <div className="relative w-full aspect-[3/2] mx-auto">
@@ -162,19 +195,22 @@ function GardenIsland({ dailyStreak, theme }) {
             <ellipse cx="250" cy="130" rx="8" ry="3" fill="#7a6520" opacity="0.12" />
             <ellipse cx="200" cy="132" rx="6" ry="2" fill="#7a6520" opacity="0.1" />
           </g>
+
+          {/* Full garden: render the static past-forest when gardenDay >= 30 */}
+          {isFullGarden && <PastForest />}
         </svg>
 
         {/* Empty state text (static) */}
-        {dailyStreak === 0 && (
+        {gardenDay === 0 && (
           <div className="absolute inset-[12%] bottom-[18%] flex flex-col items-center justify-center font-bold text-sm" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4), 0 0 2px rgba(255,255,255,0.8)' }}>
             <p className="text-white">A fresh patch of soil.</p>
             <p className="text-white/80 text-xs mt-1">Log a meal to plant a seed!</p>
           </div>
         )}
 
-        {/* Plants (static) */}
+        {/* Individual plants — only rendered when garden is not yet full */}
         <div className="absolute inset-[12%] bottom-[18%]">
-          {visiblePlants.map((plant) => (
+          {plants.map((plant) => (
             <div
               key={`plant-${plant.id}`}
               className={`absolute flex items-end justify-center -translate-x-1/2 -translate-y-[80%] ${plant.isNew ? 'plant-pop' : ''}`}
@@ -232,15 +268,19 @@ function GardenPlot({ getEntriesForDate, dailyStreak, theme }) {
 // --- Full Garden Widget (Desktop Sidebar) ---
 export function NourishGarden({ theme, dailyStreak, getEntriesForDate }) {
   const [view, setView] = useState('flat'); // 'flat' or '3d'
-  const todayHasEntries = getEntriesForDate(new Date(), '', 'newest', []).length > 0;
-  const effectiveStreak = dailyStreak > 0 ? dailyStreak : (todayHasEntries ? 1 : 0);
-  const tier = getTier(effectiveStreak);
-  const nextTier = getNextTier(effectiveStreak);
-  const nextMilestone = getNextMilestone(effectiveStreak);
-  const rawProgress = nextTier 
-    ? ((effectiveStreak - tier.min) / (nextTier.min - tier.min)) * 100
+
+  // gardenDay cycles 1–30 then resets. At 30 the garden is "full".
+  // The streak badge always shows the real dailyStreak — never reset.
+  const gardenDay = dailyStreak === 0 ? 0 : ((dailyStreak - 1) % 30) + 1;
+  const gardenCycle = dailyStreak === 0 ? 0 : Math.floor((dailyStreak - 1) / 30) + 1;
+
+  const tier = getTier(dailyStreak);
+  const nextTier = getNextTier(dailyStreak);
+  const nextMilestone = getNextMilestone(dailyStreak);
+  const rawProgress = nextTier
+    ? ((dailyStreak - tier.min) / (nextTier.min - tier.min)) * 100
     : 100;
-  const milestoneProgress = effectiveStreak > 0 ? Math.max(8, rawProgress) : 0;
+  const milestoneProgress = dailyStreak > 0 ? Math.max(8, rawProgress) : 0;
 
   return (
     <div className={`w-full rounded-[2rem] ${theme.card} ${theme.textMain} theme-transition shadow-xl relative overflow-hidden group hover:scale-[1.02] transition-all duration-500`}>
@@ -255,7 +295,9 @@ export function NourishGarden({ theme, dailyStreak, getEntriesForDate }) {
             <span className="text-2xl">{tier.icon}</span>
             <div>
               <p className={`text-xs font-black uppercase tracking-widest ${tier.color}`}>{tier.name}</p>
-              <p className={`text-[9px] font-bold opacity-40 ${theme.textMain}`}>Nourish Garden</p>
+              <p className={`text-[9px] font-bold opacity-40 ${theme.textMain}`}>
+                Nourish Garden{gardenCycle > 1 ? ` · Cycle ${gardenCycle}` : ''}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -266,9 +308,9 @@ export function NourishGarden({ theme, dailyStreak, getEntriesForDate }) {
             >
               {view === 'flat' ? '🏝️ 3D' : '📊 Flat'}
             </button>
-            {effectiveStreak > 0 && (
+            {dailyStreak > 0 && (
               <div className={`px-3 py-1.5 rounded-xl bg-gradient-to-r ${tier.gradient} text-white`}>
-                <span className="text-lg font-black leading-none">{effectiveStreak}</span>
+                <span className="text-lg font-black leading-none">{dailyStreak}</span>
                 <span className="text-[8px] font-bold opacity-70 ml-0.5">days</span>
               </div>
             )}
@@ -282,18 +324,18 @@ export function NourishGarden({ theme, dailyStreak, getEntriesForDate }) {
 
         {view === '3d' ? (
           /* 3D Island View */
-          <GardenIsland dailyStreak={effectiveStreak} theme={theme} />
+          <GardenIsland gardenDay={gardenDay} />
         ) : (
           /* Flat View */
           <>
             {/* 7-Day Garden Plot */}
             <div className="mb-5">
               <p className={`text-[8px] font-black uppercase tracking-[0.2em] opacity-30 mb-2 ${theme.textMain}`}>This Week's Garden</p>
-              <GardenPlot getEntriesForDate={getEntriesForDate} dailyStreak={effectiveStreak} theme={theme} />
+              <GardenPlot getEntriesForDate={getEntriesForDate} dailyStreak={dailyStreak} theme={theme} />
             </div>
 
             {/* Progress to Next Tier */}
-            {nextTier && effectiveStreak > 0 && (
+            {nextTier && dailyStreak > 0 && (
               <div className="space-y-2">
                 <div className="flex justify-between text-[8px] font-black uppercase opacity-40 tracking-widest">
                   <span>{tier.icon} {tier.name}</span>
@@ -311,17 +353,17 @@ export function NourishGarden({ theme, dailyStreak, getEntriesForDate }) {
         )}
 
         {/* Next Milestone */}
-        {effectiveStreak > 0 && (
+        {dailyStreak > 0 && (
           <div className={`mt-4 flex items-center justify-center gap-2 py-2 rounded-xl ${theme.inputBg}`}>
             <span className="text-[9px]">🎯</span>
             <span className={`text-[9px] font-black uppercase tracking-wider opacity-50 ${theme.textMain}`}>
-              <span>{nextMilestone - effectiveStreak} days to {nextMilestone}-day milestone</span>
+              <span>{nextMilestone - dailyStreak} days to {nextMilestone}-day milestone</span>
             </span>
           </div>
         )}
 
         {/* Seed State */}
-        {effectiveStreak === 0 && todayHasEntries === false && (
+        {dailyStreak === 0 && (
           <div className={`text-center py-3 rounded-xl ${theme.inputBg} mt-2`}>
             <p className={`text-xs font-bold opacity-50 ${theme.textMain}`}>Log a meal to plant your first seed 🌰</p>
           </div>

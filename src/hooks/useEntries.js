@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { collection, addDoc, deleteDoc, doc, query, updateDoc, setDoc, getDoc, getDocs, where, orderBy } from 'firebase/firestore';
-import { db, appId } from '../config/firebase';
+import { collection, addDoc, deleteDoc, doc, query, updateDoc, getDocs, where, orderBy } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, appId, storage } from '../config/firebase';
 import { saveEntries, loadEntries } from '../storage.js';
+import { compressImage } from '../utils/helpers';
 
 // Find duplicate entry IDs: same name + same calories + same createdAt (keep the first, mark rest as dupes)
 function findDuplicateIds(entries) {
@@ -29,6 +31,18 @@ function deduplicateEntries(entries) {
   });
 }
 
+// Helper: Strip expired blob URLs from loaded entries
+function sanitizeEntries(entries) {
+  return entries.map(entry => {
+    // Blob URLs are session-specific and expire on reload. 
+    // If we see one in storage, it's dead. Remove it to prevent 404s.
+    if (entry.imageUrl && entry.imageUrl.startsWith('blob:')) {
+      return { ...entry, imageUrl: null };
+    }
+    return entry;
+  });
+}
+
 export function useEntries({ user }) {
   const [entries, setEntries] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,11 +54,13 @@ export function useEntries({ user }) {
     time: '', finished: true, feeling: 'good', note: '', tags: ''
   });
   const syncInProgress = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchEntries = useCallback(async () => {
     if (!user || user.isAnonymous) {
       const localEntries = loadEntries();
-      setEntries(deduplicateEntries(localEntries));
+      // Deduplicate AND sanitize (remove expired blob URLs)
+      setEntries(deduplicateEntries(sanitizeEntries(localEntries)));
       return;
     }
     if (syncInProgress.current) return;
@@ -59,6 +75,13 @@ export function useEntries({ user }) {
         const collectionRef = collection(db, 'artifacts', appId, 'users', user.uid, 'journal_entries');
         for (const entry of localEntries) {
           const { id: _id, ...entryWithoutId } = entry;
+          // If syncing a local entry with a blob URL to Firestore, we can't upload the blob anymore 
+          // (it's likely expired if reload happened). If it's base64, it might be too large for Firestore 
+          // but we'll try. Ideally, we should upload base64 to Storage, but for now let's just 
+          // omit the image if it's a blob URL.
+          if (entryWithoutId.imageUrl && entryWithoutId.imageUrl.startsWith('blob:')) {
+             entryWithoutId.imageUrl = null;
+          }
           await addDoc(collectionRef, entryWithoutId);
         }
       }
@@ -196,6 +219,8 @@ export function useEntries({ user }) {
 
   const handleSaveEntry = useCallback(async (formData, { dailyStreak, setDailyStreak, setShowStreakCelebration, setIsModalOpen, showToast }) => {
     if (!formData.name) return;
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
     const entryData = { 
         ...formData,
@@ -203,35 +228,47 @@ export function useEntries({ user }) {
         protein: Number(formData.protein) || 0,
         carbs: Number(formData.carbs) || 0,
         fats: Number(formData.fats) || 0,
-        createdAt: editingId ? entries.find(e => e.id === editingId)?.createdAt : Date.now(),
+        createdAt: editingId ? (entries.find(e => e.id === editingId)?.createdAt ?? 0) : Date.now(),
     };
+
+    // Remove the file object before saving to Firestore/localStorage
+    delete entryData.imageFile;
 
     if (user && !user.isAnonymous) {
       try {
+        // Upload image if present
+        if (formData.imageFile) {
+            try {
+                const compressedBlob = await compressImage(formData.imageFile);
+                const filename = `meal_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+                const storageRef = ref(storage, `users/${user.uid}/meal_photos/${filename}`);
+                await uploadBytes(storageRef, compressedBlob);
+                const downloadURL = await getDownloadURL(storageRef);
+                entryData.imageUrl = downloadURL;
+
+                // If editing and replacing an old image, try to delete the old one
+                if (editingId) {
+                    const oldEntry = entries.find(e => e.id === editingId);
+                    if (oldEntry?.imageUrl) {
+                        try {
+                            const oldRef = ref(storage, oldEntry.imageUrl);
+                            await deleteObject(oldRef);
+                        } catch (e) {
+                            console.warn('Failed to delete old image:', e);
+                        }
+                    }
+                }
+            } catch (uploadError) {
+                console.error('Image upload failed:', uploadError);
+                if (showToast) showToast('Failed to upload image. Saving meal without it.', 'error');
+            }
+        }
+
         if (editingId) {
             await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'journal_entries', editingId), entryData);
         } else {
             await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'journal_entries'), entryData);
-            
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main');
-            const docSnap = await getDoc(docRef);
-            const data = docSnap.exists() ? docSnap.data() : {};
-            
-            if (data.lastMealDate !== todayStr) {
-                let newStreak = 1;
-                if (data.lastMealDate === yesterdayStr) {
-                    newStreak = (data.dailyStreak || 0) + 1;
-                }
-                await setDoc(docRef, { lastMealDate: todayStr, dailyStreak: newStreak }, { merge: true });
-                setDailyStreak(newStreak);
-                setShowStreakCelebration(true);
-            }
+            setShowStreakCelebration(true);
         }
         // Re-fetch to sync local state with Firestore
         fetchEntries();
@@ -243,30 +280,39 @@ export function useEntries({ user }) {
         if (showToast) {
           showToast('Failed to save meal. Changes saved locally.', 'error');
         }
+      } finally {
+        setIsSubmitting(false);
       }
     } else {
+      // Device-only mode: Convert image to Base64 for localStorage
+      let localImageUrl = formData.imageUrl || (editingId ? entries.find(e => e.id === editingId)?.imageUrl : null);
+
+      if (formData.imageFile) {
+          try {
+              // Compress aggressively (800px, 0.6 quality) to save localStorage space
+              const compressedBlob = await compressImage(formData.imageFile, 800, 0.6);
+              
+              // Convert Blob to Base64 Data URL
+              localImageUrl = await new Promise((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(compressedBlob);
+              });
+          } catch (e) {
+              console.error("Failed to process local image", e);
+              if (showToast) showToast('Failed to save image locally', 'error');
+          }
+      }
+      
       const newEntry = {
         ...entryData,
         id: editingId || `local_${Date.now()}`,
+        imageUrl: localImageUrl
       };
       
       if (!editingId) {
-          const today = new Date();
-          const todayStr = today.toISOString().split('T')[0];
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          const yesterdayStr = yesterday.toISOString().split('T')[0];
-          
-          const lastMealDate = localStorage.getItem('nourish-last-meal-date');
-          if (lastMealDate !== todayStr) {
-              let newStreak = 1;
-              if (lastMealDate === yesterdayStr) {
-                  newStreak = dailyStreak + 1;
-              }
-              setDailyStreak(newStreak);
-              setShowStreakCelebration(true);
-              localStorage.setItem('nourish-last-meal-date', todayStr);
-          }
+          setShowStreakCelebration(true);
       }
 
       const updatedEntries = editingId 
@@ -274,15 +320,18 @@ export function useEntries({ user }) {
         : [...entries, newEntry];
 
       setEntries(updatedEntries);
-      saveEntries(updatedEntries);
-      if (showToast) {
+      const saved = saveEntries(updatedEntries);
+      if (!saved && showToast) {
+        showToast('Storage full! Image could not be saved locally.', 'warning');
+      } else if (showToast) {
         showToast(editingId ? 'Meal updated! 🌱' : 'Meal logged! 🌱', 'success');
       }
+      setIsSubmitting(false);
     }
     
     setIsModalOpen(false);
     setEditingId(null);
-  }, [user, editingId, entries, fetchEntries]);
+  }, [user, editingId, entries, fetchEntries, isSubmitting]);
 
   const handleDelete = useCallback(async (e, id) => {
     e.stopPropagation();
@@ -293,6 +342,17 @@ export function useEntries({ user }) {
 
     if (user && !user.isAnonymous) {
       try {
+        // Try to delete associated image if exists
+        const entryToDelete = entries.find(e => e.id === id);
+        if (entryToDelete?.imageUrl) {
+            try {
+                const imageRef = ref(storage, entryToDelete.imageUrl);
+                await deleteObject(imageRef);
+            } catch (imgError) {
+                console.warn('Failed to delete image from storage:', imgError);
+            }
+        }
+
         await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'journal_entries', id));
       } catch (error) {
         console.error("Error deleting document: ", error);
@@ -330,6 +390,7 @@ export function useEntries({ user }) {
     sortBy, setSortBy,
     editingId, setEditingId,
     newItem, setNewItem,
+    isSubmitting,
     getEntriesForDate,
     todaysEntries,
     todaysTotals,

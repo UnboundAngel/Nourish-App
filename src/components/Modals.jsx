@@ -474,7 +474,7 @@ export const StreakCelebration = ({ currentStreak, onClose, theme, userName }) =
 
     const message = useMemo(() => {
         if (currentStreak === 1) return "First log completed! Your garden begins.";
-        if (currentStreak % 7 === 0) return `${currentStreak} days — that's a full week!`;
+        if (currentStreak >= 7 && currentStreak % 7 === 0) return `${currentStreak} days — that's a full week!`;
         if (currentStreak >= 30) return "A thriving grove. Legendary!";
         if (currentStreak >= 15) return "Deep roots, strong growth.";
         if (currentStreak >= 8) return "Your garden is in full bloom!";

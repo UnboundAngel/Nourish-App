@@ -2,9 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
 
+const THEME_STORAGE_KEY = 'nourish-theme';
+
 export function useSettings() {
-  // Theme State
-  const [currentThemeId, setCurrentThemeId] = useState('Autumn');
+  // Theme State — read from localStorage so the correct theme is applied immediately
+  const [currentThemeId, setCurrentThemeId] = useState(
+    () => localStorage.getItem(THEME_STORAGE_KEY) || 'Autumn'
+  );
 
   // UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,6 +68,11 @@ export function useSettings() {
     return localStreak ? Number(localStreak) : 0;
   });
 
+  // Sync theme to localStorage so it loads instantly on next visit
+  useEffect(() => {
+    localStorage.setItem(THEME_STORAGE_KEY, currentThemeId);
+  }, [currentThemeId]);
+
   // Sync daily targets to local storage
   useEffect(() => {
     localStorage.setItem('nourish-daily-targets', JSON.stringify(dailyTargets));
@@ -83,6 +92,9 @@ export function useSettings() {
   const pendingUpdates = useRef({});
   const debounceTimer = useRef(null);
 
+  // Keep a ref to the current user so the beforeunload handler can access it
+  const userRef = useRef(null);
+
   const flushProfileUpdate = useCallback(async (user) => {
     if (!user || Object.keys(pendingUpdates.current).length === 0) return;
     try {
@@ -93,9 +105,21 @@ export function useSettings() {
   }, []);
 
   const queueProfileUpdate = useCallback((updates, user) => {
+    userRef.current = user;
     pendingUpdates.current = { ...pendingUpdates.current, ...updates };
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => flushProfileUpdate(user), 2000);
+  }, [flushProfileUpdate]);
+
+  // Flush any pending debounced saves when the tab/window is closed
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (userRef.current && Object.keys(pendingUpdates.current).length > 0) {
+        flushProfileUpdate(userRef.current);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [flushProfileUpdate]);
 
   const handleThemeChange = (newTheme, user) => {

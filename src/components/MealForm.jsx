@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Clock, ChevronUp, ChevronDown, X, Tag, Zap, Heart } from 'lucide-react';
+import { Clock, ChevronUp, ChevronDown, X, Tag, Zap, Heart, Camera, Image as ImageIcon } from 'lucide-react';
 import { Modal } from './Modals';
 import { FEELING_LIST, normalizeFeeling } from '../utils/feelings';
 
@@ -9,7 +9,7 @@ const SUGGESTED_TAGS = ['Healthy', 'Homemade', 'Takeout', 'Snack', 'High Protein
 export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialData, use24HourTime, foodMemory }) => {
     const [formData, setFormData] = useState({
         name: '', calories: 0, protein: 0, carbs: 0, fats: 0, type: 'Breakfast',
-        time: '12:00', finished: true, feeling: 'good', note: '', tags: ''
+        time: '12:00', finished: true, feeling: 'good', note: '', tags: '', imageUrl: ''
     });
     const [isChangingTime, setIsChangingTime] = useState(false);
     const [editHour, setEditHour] = useState('');
@@ -20,6 +20,9 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showPantry, setShowPantry] = useState(false);
+    const [lastMeal, setLastMeal] = useState(null);
+    const [calorieLocked, setCalorieLocked] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const nameRef = useRef(null);
     const suggestionsRef = useRef(null);
     const caloriesRef = useRef(null);
@@ -28,8 +31,17 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
     const touchStartY = useRef(null);
     const formDataRef = useRef(formData);
     const errorsRef = useRef(errors);
+    const fileInputRef = useRef(null);
 
     // --- Helpers ---
+    const getSmartType = useCallback(() => {
+        const h = new Date().getHours();
+        if (h >= 5 && h < 11) return 'Breakfast';
+        if (h >= 11 && h < 16) return 'Lunch';
+        if (h >= 16 && h < 22) return 'Dinner';
+        return 'Snack';
+    }, []);
+
     const getCurrentTime = useCallback(() => {
         const now = new Date();
         return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -57,6 +69,22 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         if (errors.calories) setErrors(prev => ({...prev, calories: null}));
     };
 
+    const applyLastMeal = () => {
+        if (!lastMeal) return;
+        setFormData(prev => ({
+            ...prev,
+            name: lastMeal.name,
+            calories: lastMeal.calories,
+            protein: lastMeal.protein,
+            carbs: lastMeal.carbs,
+            fats: lastMeal.fats,
+            tags: lastMeal.tags || '',
+            note: lastMeal.note || '',
+        }));
+        if (errors.name) setErrors(prev => ({...prev, name: null}));
+        if (errors.calories) setErrors(prev => ({...prev, calories: null}));
+    };
+
     // --- Effects ---
     useEffect(() => {
         if (isOpen) {
@@ -64,9 +92,9 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                 setFormData(initialData);
             } else {
                 setFormData({
-                    name: '', calories: 0, protein: 0, carbs: 0, fats: 0, type: 'Breakfast',
+                    name: '', calories: 0, protein: 0, carbs: 0, fats: 0, type: getSmartType(),
                     time: getCurrentTime(),
-                    finished: true, feeling: 'good', note: '', tags: ''
+                    finished: true, feeling: 'good', note: '', tags: '', imageUrl: ''
                 });
             }
             setIsChangingTime(false);
@@ -78,15 +106,36 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         }
     }, [isOpen, editingId, initialData, getCurrentTime]);
 
+    // Cleanup object URLs to avoid memory leaks
+    useEffect(() => {
+        return () => {
+            if (formData.imageUrl && formData.imageUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(formData.imageUrl);
+            }
+        };
+    }, [formData.imageUrl]);
+
+    // Update last meal when type changes or modal opens (for quick repeat)
+    useEffect(() => {
+        if (isOpen && foodMemory && !editingId) {
+            const last = foodMemory.getLastMeal(formData.type);
+            setLastMeal(last);
+        }
+    }, [isOpen, formData.type, foodMemory, editingId]);
+
     // Keep refs in sync with state for the native wheel listener
     useEffect(() => { formDataRef.current = formData; }, [formData]);
     useEffect(() => { errorsRef.current = errors; }, [errors]);
 
-    // Attach a NATIVE non-passive wheel listener so preventDefault() actually works
+    // Attach a NATIVE non-passive wheel listener so preventDefault() actually works.
+    // Only intercept wheel events (desktop mouse) — touch scroll is handled separately
+    // via the touchmove handler which checks pointer origin before blocking page scroll.
     useEffect(() => {
         const el = calHubRef.current;
         if (!el) return;
         const onWheel = (e) => {
+            // Only intercept if the event originates from a non-touch device
+            if (e.pointerType === 'touch') return;
             e.preventDefault();
             e.stopPropagation();
             setShowScrollHint(false);
@@ -103,20 +152,32 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
     // --- Handlers ---
     const handleMacroChange = (macro, value) => {
         const updatedData = { ...formData, [macro]: value };
-        const newCalories = calculateCaloriesFromMacros(updatedData);
-        setFormData({ ...updatedData, calories: newCalories.toString() });
+        if (!calorieLocked) {
+            const newCalories = calculateCaloriesFromMacros(updatedData);
+            setFormData({ ...updatedData, calories: newCalories.toString() });
+        } else {
+            setFormData(updatedData);
+        }
     };
 
     const handleIncrementMacro = (macro) => {
         const updatedData = { ...formData, [macro]: Number(formData[macro]) + 1 };
-        const newCalories = calculateCaloriesFromMacros(updatedData);
-        setFormData({ ...updatedData, calories: newCalories.toString() });
+        if (!calorieLocked) {
+            const newCalories = calculateCaloriesFromMacros(updatedData);
+            setFormData({ ...updatedData, calories: newCalories.toString() });
+        } else {
+            setFormData(updatedData);
+        }
     };
 
     const handleDecrementMacro = (macro) => {
         const updatedData = { ...formData, [macro]: Math.max(0, Number(formData[macro]) - 1) };
-        const newCalories = calculateCaloriesFromMacros(updatedData);
-        setFormData({ ...updatedData, calories: newCalories.toString() });
+        if (!calorieLocked) {
+            const newCalories = calculateCaloriesFromMacros(updatedData);
+            setFormData({ ...updatedData, calories: newCalories.toString() });
+        } else {
+            setFormData(updatedData);
+        }
     };
 
     // Commit local time editor state back to formData.time (24h format)
@@ -179,12 +240,14 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
 
     const handleCaloriesTouchMove = (e) => {
         if (touchStartY.current === null) return;
-        e.preventDefault();
-        e.stopPropagation();
-        setShowScrollHint(false);
         const touchY = e.touches[0].clientY;
         const deltaY = touchStartY.current - touchY;
-        if (Math.abs(deltaY) > 10) {
+        // Only intercept the touch if the user is clearly swiping vertically (not trying to scroll the page).
+        // Require at least 8px of movement before we claim the gesture.
+        if (Math.abs(deltaY) > 8) {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowScrollHint(false);
             const delta = deltaY > 0 ? 5 : -5;
             const newCals = Math.max(0, Number(formData.calories) + delta);
             setFormData({...formData, calories: newCals.toString()});
@@ -197,8 +260,17 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
         touchStartY.current = null;
     };
 
+    const handleImageSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            setFormData(prev => ({ ...prev, imageUrl: url, imageFile: file }));
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
         const newErrors = {};
         if (!formData.name.trim()) newErrors.name = 'Please enter a meal name';
         if (!Number(formData.calories) || Number(formData.calories) <= 0) newErrors.calories = 'Calories must be greater than 0';
@@ -213,7 +285,8 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
             return;
         }
         setErrors({});
-        onSave(formData);
+        setIsSubmitting(true);
+        Promise.resolve(onSave(formData)).finally(() => setIsSubmitting(false));
     };
 
     // --- Computed ---
@@ -257,6 +330,40 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                 {/* 1. TOP BAR: NAME & TIME */}
                 <div className="space-y-4 sm:space-y-6">
                     <div className="text-center">
+                        {/* Photo Upload */}
+                        <div className="flex justify-center mb-6">
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={handleImageSelect} 
+                                accept="image/*" 
+                                className="hidden" 
+                            />
+                            <button 
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className={`px-4 py-2 rounded-2xl flex items-center justify-center gap-2 transition-all ${
+                                    formData.imageUrl 
+                                    ? 'bg-emerald-500/10 text-emerald-600 shadow-sm' 
+                                    : `${theme.inputBg} ${theme.textMain} opacity-40 hover:opacity-100`
+                                }`}
+                            >
+                                {formData.imageUrl ? (
+                                    <>
+                                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-black/10">
+                                            <img src={formData.imageUrl} alt="Meal" className="w-full h-full object-cover" />
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Change Photo</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Camera size={16} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Add Photo</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
                         <div className="relative">
                             <input 
                                 ref={nameRef}
@@ -310,6 +417,29 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                     {/* Common Meals & Pantry Quick-Add (only when creating new, not editing) */}
                     {!editingId && foodMemory && !formData.name && (
                         <div className="space-y-3 animate-in fade-in duration-300">
+                            {/* Repeat Last Meal Button */}
+                            {lastMeal && (
+                                <button 
+                                    type="button" 
+                                    onClick={applyLastMeal}
+                                    className={`w-full p-4 rounded-2xl ${theme.primary} text-white shadow-lg shadow-${theme.primary.replace('bg-', '')}/20 flex items-center justify-between group active:scale-[0.98] transition-all`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                                            <Zap size={20} className="fill-current" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-xs font-bold uppercase tracking-wider opacity-80">Repeat Last {formData.type}</p>
+                                            <p className="text-sm font-black truncate max-w-[180px] sm:max-w-[240px]">{lastMeal.name}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xl font-black">{lastMeal.calories}</p>
+                                        <p className="text-[9px] font-bold opacity-60 uppercase tracking-widest">kcal</p>
+                                    </div>
+                                </button>
+                            )}
+
                             {commonMeals.length > 0 && (
                                 <div className={`p-4 rounded-2xl ${theme.inputBg} shadow-inner space-y-3`}>
                                     <div className="flex items-center gap-2">
@@ -422,7 +552,21 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                                 }}
                                 onFocus={() => setShowScrollHint(false)}
                             />
-                            <div className="text-[10px] font-black opacity-30 uppercase tracking-[0.4em] mt-1">Calories Total</div>
+                            <div className="flex items-center justify-center gap-2 mt-1">
+                                <div className="text-[10px] font-black opacity-30 uppercase tracking-[0.4em]">Calories Total</div>
+                                <button
+                                    type="button"
+                                    onClick={() => setCalorieLocked(l => !l)}
+                                    title={calorieLocked ? 'Calories locked (manual). Click to auto-calculate from macros.' : 'Auto-calculating from macros. Click to enter manually.'}
+                                    className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md transition-all ${
+                                        calorieLocked
+                                            ? 'bg-amber-400/20 text-amber-600'
+                                            : 'opacity-20 hover:opacity-60'
+                                    }`}
+                                >
+                                    {calorieLocked ? 'Manual' : 'Auto'}
+                                </button>
+                            </div>
                             {!errors.calories && showScrollHint && (
                                 <p className="text-xs font-bold mt-2 opacity-30 animate-pulse">Scroll or swipe to adjust</p>
                             )}
@@ -620,10 +764,11 @@ export const MealForm = ({ isOpen, onClose, onSave, theme, editingId, initialDat
                             </button>
                         )}
                         <button 
-                            type="submit" 
-                            className={`w-full py-4 sm:py-5 rounded-full ${theme.primary} text-white font-black text-lg sm:text-xl shadow-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.15em] sm:tracking-[0.2em]`}
+                            type="submit"
+                            disabled={isSubmitting}
+                            className={`w-full py-4 sm:py-5 rounded-full ${theme.primary} text-white font-black text-lg sm:text-xl shadow-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.15em] sm:tracking-[0.2em] disabled:opacity-50 disabled:pointer-events-none`}
                         >
-                            {editingId ? "Update Meal" : "Save Entry"}
+                            {isSubmitting ? 'Saving...' : editingId ? 'Update Meal' : 'Save Entry'}
                         </button>
                     </div>
                 </div>

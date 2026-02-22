@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getMessaging } from 'firebase/messaging';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAfMuQpKXVlbKQRqJ8r4nO-FXn6VerohUo",
@@ -17,6 +18,7 @@ export const auth = getAuth(app);
 // Use localStorage persistence for iOS standalone/homescreen PWA compatibility
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 export const appId = 'default-app-id';
 
 // Initialize Firebase Messaging (only in browser context, not in service worker)

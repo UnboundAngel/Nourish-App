@@ -1,11 +1,17 @@
-import { useEffect, useState, useCallback } from 'react';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messaging';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
+
+const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
 export function usePushNotifications({ user, showToast }) {
   const [fcmToken, setFcmToken] = useState(null);
   const [permissionStatus, setPermissionStatus] = useState('default');
+
+  // Track the previously registered token so we can detect rotation.
+  // Declared before any useCallback so hook order is stable across renders.
+  const prevTokenRef = useRef(null);
 
   const requestPermission = useCallback(async () => {
     if (!('Notification' in window)) {
@@ -45,17 +51,23 @@ export function usePushNotifications({ user, showToast }) {
     if (!user || user.isAnonymous) return;
 
     try {
-      const token = await getToken(messaging, {
-        vapidKey: 'BKwhMjzSQtuuEb7g9xLfgSs58w4fb1M4Ch6ssI_hpYJbxtcuZxNmXWwxSZXiB9BlTfMtnqIV0_oy_E363TDl0nE' // TODO: Replace with actual VAPID key from Firebase Console
-      });
+      const token = await getToken(messaging, { vapidKey: VAPID_KEY });
 
       if (token) {
+        // If the token has rotated, remove the old Firestore record first
+        if (prevTokenRef.current && prevTokenRef.current !== token) {
+          const oldTokenId = prevTokenRef.current.substring(0, 20);
+          const oldDeviceRef = doc(db, 'artifacts', appId, 'users', user.uid, 'devices', oldTokenId);
+          deleteDoc(oldDeviceRef).catch(() => {});
+        }
+
+        prevTokenRef.current = token;
         setFcmToken(token);
-        
-        // Store token in Firestore
-        const tokenId = token.substring(0, 20); // Use first 20 chars as ID
+
+        // Store (or update) token in Firestore
+        const tokenId = token.substring(0, 20);
         const deviceRef = doc(db, 'artifacts', appId, 'users', user.uid, 'devices', tokenId);
-        
+
         await setDoc(deviceRef, {
           token: token,
           platform: 'web',

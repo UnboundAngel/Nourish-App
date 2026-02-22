@@ -124,6 +124,27 @@ export function useFoodMemory({ entries }) {
       .slice(0, 6);
   }, [foodHistory]);
 
+  // Get the most recent meal for a given type
+  const getLastMeal = useCallback((mealType) => {
+    // Search entries backwards
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if ((entries[i].type || 'Snack') === mealType) {
+        const entry = entries[i];
+        return {
+          name: entry.name,
+          calories: entry.calories,
+          protein: entry.protein,
+          carbs: entry.carbs,
+          fats: entry.fats,
+          type: entry.type,
+          tags: entry.tags,
+          note: entry.note
+        };
+      }
+    }
+    return null;
+  }, [entries]);
+
   return {
     pantry,
     foodHistory,
@@ -132,5 +153,6 @@ export function useFoodMemory({ entries }) {
     isInPantry,
     searchFoods,
     getCommonMeals,
+    getLastMeal,
   };
 }

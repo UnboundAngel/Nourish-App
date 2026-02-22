@@ -126,7 +126,7 @@ export default function NourishApp() {
   const foodMemory = useFoodMemory({ entries });
 
   // --- Streak ---
-  useStreak({ user, loading, profileData, getEntriesForDate, setDailyStreak });
+  useStreak({ user, loading, profileData, getEntriesForDate, setDailyStreak, entries });
 
   // --- Notifications ---
   const {

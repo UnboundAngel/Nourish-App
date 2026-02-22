@@ -169,6 +169,12 @@ export function TrendsPage({ entries, theme, dailyTargets, onClose, insights }) 
             >
               Patterns
             </button>
+            <button 
+              onClick={() => setActiveTab('growth')}
+              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'growth' ? theme.primary + ' text-white shadow-md' : 'text-black/40 hover:text-black/60'}`}
+            >
+              Growth
+            </button>
           </div>
 
           {activeTab === 'overview' ? (
@@ -389,6 +395,36 @@ export function TrendsPage({ entries, theme, dailyTargets, onClose, insights }) 
                 </div>
               </div>
             </>
+          ) : activeTab === 'growth' ? (
+            <div className="space-y-6">
+              {/* Growth Header */}
+              <div className={`${theme.card} rounded-3xl overflow-hidden`}>
+                <div className="px-5 py-4 flex items-center gap-2 border-b border-black/5">
+                  <TrendingUp size={18} className="text-emerald-500" />
+                  <div className="flex-1">
+                    <h3 className={`font-bold ${theme.primaryText} text-sm tracking-wide uppercase`}>Growth & Positives</h3>
+                    <p className={`text-[10px] ${theme.textMain} opacity-50 mt-0.5`}>Habits that make you feel great</p>
+                  </div>
+                </div>
+                <div className="divide-y divide-black/5">
+                  {insights.positivePatterns && insights.positivePatterns.length > 0 ? (
+                    insights.positivePatterns.map((pattern, i) => (
+                      <PatternCard key={i} pattern={pattern} theme={theme} insights={insights} isPositive={true} />
+                    ))
+                  ) : (
+                    <div className="p-12 text-center">
+                      <div className="w-16 h-16 rounded-full bg-black/5 flex items-center justify-center mx-auto mb-4">
+                        <TrendingUp size={32} className="opacity-20" />
+                      </div>
+                      <p className={`text-sm font-bold ${theme.textMain} mb-1`}>No superfoods found yet</p>
+                      <p className={`text-xs ${theme.textMain} opacity-50 max-w-sm mx-auto leading-relaxed`}>
+                        Keep tracking "Good" or "Great" days to discover what fuels your best self!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="space-y-6">
 
@@ -504,15 +540,22 @@ export function TrendsPage({ entries, theme, dailyTargets, onClose, insights }) 
   );
 }
 
-function PatternCard({ pattern, theme, insights }) {
+function PatternCard({ pattern, theme, insights, isPositive }) {
   const [expanded, setExpanded] = React.useState(false);
   const hasExamples = pattern.examples && pattern.examples.length > 0;
+  // For positive patterns, we might track "goodExamples"
+  const examples = isPositive ? (pattern.goodExamples || pattern.examples) : pattern.examples;
+  const hasContent = examples && examples.length > 0;
+
+  const colorClass = isPositive ? 'text-emerald-500' : 'text-rose-500';
+  const bgClass = isPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700';
+  const icon = isPositive ? '/feeling-good.svg' : (pattern.rate >= 60 ? FEELINGS.sick.icon : FEELINGS.okay.icon);
 
   return (
     <div className="px-6 py-5 hover:bg-black/[0.02] transition-colors">
       <div className="flex items-start gap-4 mb-3">
         <div className={`w-12 h-12 rounded-2xl ${theme.inputBg} flex items-center justify-center flex-shrink-0`}>
-          <img src={pattern.rate >= 60 ? FEELINGS.sick.icon : FEELINGS.okay.icon} alt="" className="w-8 h-8" />
+          <img src={icon} alt="" className="w-8 h-8" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -522,8 +565,8 @@ function PatternCard({ pattern, theme, insights }) {
             <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${pattern.confidence >= 80 ? 'bg-emerald-100 text-emerald-700' : pattern.confidence >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
               {pattern.confidence}% confidence
             </span>
-            {pattern.lift >= 2 && (
-              <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+            {pattern.lift >= 1.2 && (
+              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${bgClass}`}>
                 {pattern.lift}x baseline
               </span>
             )}
@@ -536,8 +579,8 @@ function PatternCard({ pattern, theme, insights }) {
           </p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-2xl font-black text-rose-500">{pattern.rate}%</p>
-          <p className={`text-[9px] font-bold ${theme.textMain} opacity-40 uppercase tracking-widest`}>Issue Rate</p>
+          <p className={`text-2xl font-black ${colorClass}`}>{pattern.rate}%</p>
+          <p className={`text-[9px] font-bold ${theme.textMain} opacity-40 uppercase tracking-widest`}>{isPositive ? 'Good Rate' : 'Issue Rate'}</p>
         </div>
       </div>
 
@@ -551,20 +594,20 @@ function PatternCard({ pattern, theme, insights }) {
       )}
 
       {/* Meal examples timeline */}
-      {hasExamples && (
+      {hasContent && (
         <div className="mb-3">
           <button
             onClick={() => setExpanded(!expanded)}
             className={`text-[10px] font-bold ${theme.primaryText} hover:underline mb-2 flex items-center gap-1`}
           >
-            {expanded ? 'Hide' : 'View'} {pattern.examples.length} problem meal{pattern.examples.length > 1 ? 's' : ''}
+            {expanded ? 'Hide' : 'View'} {examples.length} {isPositive ? 'great' : 'problem'} meal{examples.length > 1 ? 's' : ''}
             <ChevronRight size={12} className={`transition-transform ${expanded ? 'rotate-90' : ''}`} />
           </button>
           {expanded && (
             <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-              {pattern.examples.map((ex, j) => (
+              {examples.map((ex, j) => (
                 <div key={j} className={`flex items-center gap-3 p-2.5 rounded-xl ${theme.inputBg}`}>
-                  <img src={FEELINGS[ex.feeling]?.icon || FEELINGS.sick.icon} alt="" className="w-5 h-5 flex-shrink-0" />
+                  <img src={FEELINGS[ex.feeling]?.icon || (isPositive ? FEELINGS.good.icon : FEELINGS.sick.icon)} alt="" className="w-5 h-5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className={`text-xs font-bold ${theme.textMain} truncate`}>{ex.name}</p>
                     <p className={`text-[10px] ${theme.textMain} opacity-50`}>
@@ -581,7 +624,7 @@ function PatternCard({ pattern, theme, insights }) {
 
       {/* Action buttons */}
       <div className="flex gap-2">
-        {!insights.activeExperiment && (
+        {!isPositive && !insights.activeExperiment && (
           <button 
             onClick={() => insights.startExperiment(pattern)}
             className={`flex-1 py-2.5 rounded-xl ${theme.primary} text-white text-xs font-black uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all`}
@@ -591,7 +634,7 @@ function PatternCard({ pattern, theme, insights }) {
         )}
         <button 
           onClick={() => insights.dismissPattern(pattern.name, 'not_helpful')}
-          className={`px-4 py-2.5 rounded-xl ${theme.inputBg} text-xs font-bold ${theme.textMain} opacity-40 hover:opacity-70 transition-all`}
+          className={`px-4 py-2.5 rounded-xl ${theme.inputBg} text-xs font-bold ${theme.textMain} opacity-40 hover:opacity-70 transition-all ${isPositive ? 'w-full' : ''}`}
         >
           Dismiss
         </button>

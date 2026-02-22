@@ -76,7 +76,7 @@ export const CustomCalendar = ({ selectedDate, entries = [], onSelectDate, onClo
                 onMouseEnter={() => setHoveredDay(key)}
                 onMouseLeave={() => setHoveredDay(null)}
                 className={`
-                    relative z-10 h-10 w-10 rounded-2xl flex flex-col items-center justify-center text-sm font-black transition-all duration-300
+                    relative z-10 h-11 w-11 rounded-2xl flex flex-col items-center justify-center text-sm font-black transition-all duration-300
                     ${selected 
                         ? `${theme.primary} text-white shadow-lg shadow-emerald-500/20 scale-110` 
                         : `hover:scale-125 hover:z-20 ${theme.inputBg} hover:shadow-xl hover:${theme.primaryText}`

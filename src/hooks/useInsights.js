@@ -70,6 +70,7 @@ export function useInsights(entries, user) {
     if (!entries || entries.length < 10) return { patterns: [], topTrigger: null };
 
     const isBad = (e) => e.feeling === 'sick' || e.feeling === 'bloated';
+    const isGood = (e) => e.feeling === 'good';
 
     // ── Single-factor collectors ──
     const tagStats = {};
@@ -83,6 +84,9 @@ export function useInsights(entries, user) {
     // Baseline bad-feeling rate (used for comparison)
     const totalBad = entries.filter(isBad).length;
     const baselineRate = entries.length > 0 ? (totalBad / entries.length) * 100 : 0;
+
+    const totalGood = entries.filter(isGood).length;
+    const baselineGoodRate = entries.length > 0 ? (totalGood / entries.length) * 100 : 0;
 
     // Helper: get time bucket for an entry
     const getTimeBucket = (entry) => {
@@ -110,8 +114,8 @@ export function useInsights(entries, user) {
     };
 
     // Helper: accumulate into a stats bucket
-    const accum = (bucket, key, entry, bad) => {
-      if (!bucket[key]) bucket[key] = { name: key, total: 0, bad: 0, examples: [] };
+    const accum = (bucket, key, entry, bad, good) => {
+      if (!bucket[key]) bucket[key] = { name: key, total: 0, bad: 0, good: 0, examples: [], goodExamples: [] };
       bucket[key].total++;
       if (bad) {
         bucket[key].bad++;
@@ -127,67 +131,86 @@ export function useInsights(entries, user) {
           });
         }
       }
+      if (good) {
+        bucket[key].good++;
+        if (bucket[key].goodExamples.length < 5) {
+          bucket[key].goodExamples.push({
+            id: entry.id,
+            name: entry.name || 'Unnamed',
+            type: entry.type || 'Snack',
+            feeling: entry.feeling,
+            calories: entry.calories || 0,
+            time: entry.time,
+            date: entry.createdAt,
+          });
+        }
+      }
     };
 
     entries.forEach(entry => {
       const bad = isBad(entry);
+      const good = isGood(entry);
       const tags = entry.tags ? entry.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [];
 
       // Tags
-      tags.forEach(tag => accum(tagStats, tag, entry, bad));
+      tags.forEach(tag => accum(tagStats, tag, entry, bad, good));
 
       // Meal type
-      accum(typeStats, entry.type || 'Snack', entry, bad);
+      accum(typeStats, entry.type || 'Snack', entry, bad, good);
 
       // Time of day
       const timeBucket = getTimeBucket(entry);
-      if (timeBucket) accum(timeStats, timeBucket, entry, bad);
+      if (timeBucket) accum(timeStats, timeBucket, entry, bad, good);
 
       // Unfinished meals
-      if (entry.finished === false) accum(finishedStats, 'not finishing meals', entry, bad);
+      if (entry.finished === false) accum(finishedStats, 'not finishing meals', entry, bad, good);
 
       // Macro-based triggers
-      getMacroFlags(entry).forEach(flag => accum(macroStats, flag, entry, bad));
+      getMacroFlags(entry).forEach(flag => accum(macroStats, flag, entry, bad, good));
 
       // Day of week
       if (entry.createdAt) {
         const dayLabel = getDayLabel(entry.createdAt);
-        accum(dayOfWeekStats, dayLabel, entry, bad);
+        accum(dayOfWeekStats, dayLabel, entry, bad, good);
       }
 
       // ── Combination patterns (2-factor) ──
       // Tag + Time
       if (timeBucket) {
         tags.forEach(tag => {
-          accum(comboStats, `${tag} + ${timeBucket}`, entry, bad);
+          accum(comboStats, `${tag} + ${timeBucket}`, entry, bad, good);
         });
       }
       // Tag + Unfinished
       if (entry.finished === false) {
         tags.forEach(tag => {
-          accum(comboStats, `${tag} + not finishing`, entry, bad);
+          accum(comboStats, `${tag} + not finishing`, entry, bad, good);
         });
       }
       // Tag + High-fat / Large meal
       getMacroFlags(entry).forEach(flag => {
         tags.forEach(tag => {
-          accum(comboStats, `${tag} + ${flag.split(' ')[0]}-${flag.split(' ')[1] || ''}`.replace(/-$/, ''), entry, bad);
+          accum(comboStats, `${tag} + ${flag.split(' ')[0]}-${flag.split(' ')[1] || ''}`.replace(/-$/, ''), entry, bad, good);
         });
       });
       // Type + Time
       if (timeBucket) {
-        accum(comboStats, `${(entry.type || 'Snack').toLowerCase()} + ${timeBucket}`, entry, bad);
+        accum(comboStats, `${(entry.type || 'Snack').toLowerCase()} + ${timeBucket}`, entry, bad, good);
       }
     });
 
     // ── Score & rank patterns ──
     const calculatePatterns = (stats, category, categoryLabel) => {
       return Object.values(stats)
-        .filter(s => s.total >= 5)
+        // Minimum sample size: at least 5 total occurrences AND at least 3 bad outcomes.
+        // This prevents flagging foods that appear frequently but only have 1-2 bad results,
+        // which would be statistically meaningless (P(bad|food) vs P(bad) comparison needs
+        // enough bad samples to be reliable).
+        .filter(s => s.total >= 5 && s.bad >= 3)
         .map(s => {
           const rate = Math.round((s.bad / s.total) * 100);
           const confidence = Math.min(100, Math.round((s.total / 20) * 100));
-          // Lift: how much worse than baseline?
+          // Lift: how much worse than baseline? (P(bad|food) / P(bad))
           const lift = baselineRate > 0 ? +(rate / baselineRate).toFixed(1) : 0;
           // Composite score: rate matters most, but lift and confidence add weight
           const score = (rate * 0.5) + (lift * 15) + (confidence * 0.2);
@@ -203,7 +226,40 @@ export function useInsights(entries, user) {
             suggestion: generateSuggestion(s.name, categoryLabel, rate),
           };
         })
-        .filter(s => s.rate >= 35 && s.lift >= 1.3) // Must be 30% above baseline
+        // Lift >= 1.5: food must cause bad feelings at least 50% more often than baseline.
+        // Rate >= 35%: at least 35% of occurrences must result in bad feelings.
+        // Together these ensure we're comparing P(bad|food) vs P(bad) meaningfully.
+        .filter(s => s.rate >= 35 && s.lift >= 1.5)
+        .sort((a, b) => b.score - a.score);
+    };
+
+    const calculatePositivePatterns = (stats, category, categoryLabel) => {
+      return Object.values(stats)
+        // Minimum sample size: at least 5 total occurrences AND at least 3 good outcomes.
+        .filter(s => s.total >= 5 && s.good >= 3)
+        .map(s => {
+          const rate = Math.round((s.good / s.total) * 100);
+          const confidence = Math.min(100, Math.round((s.total / 20) * 100));
+          // Lift: how much better than baseline? (P(good|food) / P(good))
+          const lift = baselineGoodRate > 0 ? +(rate / baselineGoodRate).toFixed(1) : 0;
+          // Composite score
+          const score = (rate * 0.5) + (lift * 15) + (confidence * 0.2);
+          return {
+            ...s,
+            type: 'positive',
+            category,
+            categoryLabel,
+            rate,
+            confidence,
+            lift,
+            score,
+            description: generatePositiveDescription(s.name, categoryLabel, rate, s.total, s.good, lift, baselineGoodRate),
+            suggestion: generatePositiveSuggestion(s.name, categoryLabel, rate),
+          };
+        })
+        // Positive threshold: >60% good rate AND >1.2x baseline lift
+        // (Assuming baseline good rate is around 50-70%, we want things that are noticeably better)
+        .filter(s => s.rate >= 60 && s.lift >= 1.2)
         .sort((a, b) => b.score - a.score);
     };
 
@@ -223,6 +279,18 @@ export function useInsights(entries, user) {
         return `The combination "${name}" is linked to ${rate}% issue rate (${bad}/${total} meals)${liftText}.`;
       }
       return `${rate}% of "${name}" meals left you feeling unwell (${bad}/${total}).`;
+    };
+
+    const generatePositiveDescription = (name, category, rate, total, good, lift, baseline) => {
+        const liftText = lift >= 1.5 ? ` — huge boost vs your ${Math.round(baseline)}% average!` : ` — better than your ${Math.round(baseline)}% average.`;
+        if (category === 'Food/Ingredient') {
+          return `${good} out of ${total} meals with "${name}" made you feel great (${rate}%)${liftText}`;
+        } else if (category === 'Meal Timing') {
+          return `When ${name}, you felt great ${rate}% of the time (${good}/${total} meals)${liftText}`;
+        } else if (category === 'Nutrition') {
+          return `${name} is associated with high energy and good vibes (${rate}%)${liftText}`;
+        }
+        return `${rate}% of "${name}" meals led to feeling great (${good}/${total}).`;
     };
 
     const generateSuggestion = (name, category, rate) => {
@@ -248,9 +316,16 @@ export function useInsights(entries, user) {
       return 'Start a 7-day experiment to test this pattern.';
     };
 
+    const generatePositiveSuggestion = (name, category, rate) => {
+        if (category === 'Food/Ingredient') return `Keep it up! "${name}" seems to be a Superfood for you. 🌟`;
+        if (category === 'Meal Timing') return `This routine works well for you. Try to stick to it!`;
+        if (category === 'Nutrition') return `Your body responds well to this balance.`;
+        return `Do more of this! It makes you feel great.`;
+    };
+
     const dismissedKeys = new Set(dismissedPatterns.map(d => d.key));
 
-    const allPatterns = [
+    const negativePatterns = [
       ...calculatePatterns(tagStats, 'tag', 'Food/Ingredient'),
       ...calculatePatterns(typeStats, 'type', 'Meal Category'),
       ...calculatePatterns(timeStats, 'time', 'Meal Timing'),
@@ -261,12 +336,25 @@ export function useInsights(entries, user) {
     ]
       .filter(p => !dismissedKeys.has(p.name))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 15); // Cap at 15 most relevant
+      .slice(0, 10);
+
+    const positivePatterns = [
+      ...calculatePositivePatterns(tagStats, 'tag', 'Food/Ingredient'),
+      ...calculatePositivePatterns(typeStats, 'type', 'Meal Category'),
+      ...calculatePositivePatterns(timeStats, 'time', 'Meal Timing'),
+      ...calculatePositivePatterns(macroStats, 'macro', 'Nutrition'),
+      // Less useful for day of week or finished habits
+    ]
+      .filter(p => !dismissedKeys.has(p.name))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5); // Top 5 positive insights
 
     return {
-      patterns: allPatterns,
-      topTrigger: allPatterns[0] || null,
+      patterns: negativePatterns,
+      positivePatterns, // Export positive patterns
+      topTrigger: negativePatterns[0] || null,
       baselineRate: Math.round(baselineRate),
+      baselineGoodRate: Math.round(baselineGoodRate),
       totalMealsAnalyzed: entries.length,
     };
   }, [entries, dismissedPatterns]);

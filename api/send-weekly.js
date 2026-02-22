@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import admin from 'firebase-admin';
+import { createHmac } from 'crypto';
 
 if (!admin.apps.length) {
   try {
@@ -14,6 +15,20 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+function generateUnsubscribeToken(userId) {
+  const payload = Buffer.from(userId).toString('base64url');
+  const sig = createHmac('sha256', process.env.CRON_SECRET || 'fallback')
+    .update(payload)
+    .digest('base64url');
+  return `${payload}.${sig}`;
+}
+
+function getBaseUrl(req) {
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers['host'] || 'localhost:3000';
+  return `${proto}://${host}`;
+}
 
 export default async function handler(req, res) {
   const { secret } = req.query;
@@ -35,6 +50,9 @@ export default async function handler(req, res) {
       const userId = subDoc.id;
 
       if (!userEmail) continue;
+
+      const unsubToken = generateUnsubscribeToken(userId);
+      const unsubUrl = `${getBaseUrl(req)}/api/unsubscribe?token=${unsubToken}&type=weekly`;
 
       // Fetch last 7 days of entries
       const weekAgo = new Date();
@@ -226,6 +244,9 @@ export default async function handler(req, res) {
             
             <div style="background: #f9fafb; padding: 16px 24px; border-radius: 0 0 16px 16px; border: 1px solid #e5e7eb; border-top: none;">
               <p style="font-size: 11px; color: #999; margin: 0;">You received this because you enabled Weekly Summaries in your Nourish settings.</p>
+              <p style="font-size: 11px; color: #bbb; margin: 6px 0 0;">
+                <a href="${unsubUrl}" style="color: #bbb; text-decoration: underline;">Unsubscribe from weekly summaries</a>
+              </p>
             </div>
           </div>
         `,

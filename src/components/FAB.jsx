@@ -80,6 +80,7 @@ function GlassBlob({ theme, onClick, size = 76 }) {
 
   const baseColor = extractHex(theme.primary);
   const lightColor = lightenHex(baseColor, 0.45);
+  const glassColor = lightenHex(baseColor, 0.7);
 
   const renderFrame = useCallback(() => {
     const svg = svgRef.current;
@@ -157,9 +158,9 @@ function GlassBlob({ theme, onClick, size = 76 }) {
             <stop offset="100%" stopColor={baseColor} />
           </linearGradient>
           <linearGradient id={`blob-glass-${idRef.current}`} x1="0.2" y1="0" x2="0.8" y2="1">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.45)" />
-            <stop offset="40%" stopColor="rgba(255,255,255,0.08)" />
-            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+            <stop offset="0%" stopColor={`${glassColor}73`} />
+            <stop offset="40%" stopColor={`${glassColor}14`} />
+            <stop offset="100%" stopColor={`${glassColor}00`} />
           </linearGradient>
           <linearGradient id={`ring-stroke-${idRef.current}`} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor={`${lightColor}b3`} />

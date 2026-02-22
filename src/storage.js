@@ -8,8 +8,10 @@ export function saveEntries(entries) {
   try {
     const serializedEntries = JSON.stringify(entries);
     localStorage.setItem(LOCAL_STORAGE_KEY, serializedEntries);
+    return true;
   } catch (error) {
     console.error("Error saving entries to localStorage:", error);
+    return false;
   }
 }
 

@@ -226,8 +226,24 @@ export function MainContent({
                         <div 
                             key={entry.id}
                             onClick={() => { setEditingId(entry.id); setNewItem(entry); setIsModalOpen(true); }}
-                            className={`group relative rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 shadow-sm hover:shadow-xl ${theme.card} ${theme.textMain} transition-all duration-300 cursor-pointer theme-transition hover:-translate-y-1`}
+                            className={`group relative rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 shadow-sm hover:shadow-xl ${theme.card} ${theme.textMain} transition-all duration-300 cursor-pointer theme-transition hover:-translate-y-1 bg-noise`}
                         >
+                            {/* Meal Photo */}
+                            {entry.imageUrl && (
+                                <div className="w-full h-32 md:h-48 rounded-xl md:rounded-2xl overflow-hidden mb-4 bg-black/5 relative group/image shadow-inner">
+                                    <img 
+                                        src={entry.imageUrl} 
+                                        alt={entry.name} 
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover/image:scale-110"
+                                        loading="lazy"
+                                        onError={(e) => {
+                                            e.target.parentElement.style.display = 'none';
+                                        }}
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 transition-colors duration-300" />
+                                </div>
+                            )}
+
                             <div className="flex justify-between items-start mb-4">
                                 <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl ${theme.inputBg} theme-transition`}>
                                     <img 

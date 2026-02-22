@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import admin from 'firebase-admin';
+import { createHmac } from 'crypto';
 
 // Initialize Firebase Admin (Only once)
 if (!admin.apps.length) {
@@ -16,8 +17,25 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+/**
+ * Generate a signed token for one-click unsubscribe.
+ * Token = base64(userId) + '.' + HMAC-SHA256(base64(userId), CRON_SECRET)
+ */
+function generateUnsubscribeToken(userId) {
+  const payload = Buffer.from(userId).toString('base64url');
+  const sig = createHmac('sha256', process.env.CRON_SECRET || 'fallback')
+    .update(payload)
+    .digest('base64url');
+  return `${payload}.${sig}`;
+}
+
+function getBaseUrl(req) {
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers['host'] || 'localhost:3000';
+  return `${proto}://${host}`;
+}
+
 export default async function handler(req, res) {
-  // Add a simple secret check to ensure only our Cron Job can trigger this
   const { secret } = req.query;
   if (secret !== process.env.CRON_SECRET) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -101,7 +119,11 @@ export default async function handler(req, res) {
         </tr>
       `).join('');
 
-      // 3. Send the email using Resend
+      // 3. Build unsubscribe link
+      const unsubToken = generateUnsubscribeToken(userId);
+      const unsubUrl = `${getBaseUrl(req)}/api/unsubscribe?token=${unsubToken}`;
+
+      // 4. Send the email using Resend
       const { data, error } = await resend.emails.send({
         from: 'Nourish <onboarding@resend.dev>',
         to: [userEmail],
@@ -168,6 +190,9 @@ export default async function handler(req, res) {
             
             <div style="background: #f9fafb; padding: 16px 24px; border-radius: 0 0 16px 16px; border: 1px solid #e5e7eb; border-top: none;">
               <p style="font-size: 11px; color: #999; margin: 0;">You received this because you enabled Daily Summaries in your Nourish settings.</p>
+              <p style="font-size: 11px; color: #bbb; margin: 6px 0 0;">
+                <a href="${unsubUrl}" style="color: #bbb; text-decoration: underline;">Unsubscribe from daily summaries</a>
+              </p>
             </div>
           </div>
         `,

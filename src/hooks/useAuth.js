@@ -10,8 +10,41 @@ import {
   signOut,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, addDoc } from 'firebase/firestore';
 import { auth, db, appId } from '../config/firebase';
+import { loadEntries, saveEntries } from '../storage.js';
+
+/**
+ * Migrate any localStorage entries to Firestore for a newly authenticated user.
+ * Runs at most once per UID (guarded by a localStorage flag).
+ */
+async function migrateLocalEntriesToFirestore(uid) {
+  const migrationKey = `nourish-migrated-${uid}`;
+  if (localStorage.getItem(migrationKey)) return; // already done
+
+  const localEntries = loadEntries();
+  if (!localEntries || localEntries.length === 0) {
+    localStorage.setItem(migrationKey, '1');
+    return;
+  }
+
+  try {
+    const col = collection(db, 'artifacts', appId, 'users', uid, 'journal_entries');
+    await Promise.all(
+      localEntries.map(entry => {
+        // Strip the local id so Firestore generates a real one
+        const { id: _id, ...data } = entry;
+        return addDoc(col, data);
+      })
+    );
+    // Clear localStorage entries after successful upload
+    saveEntries([]);
+    localStorage.setItem(migrationKey, '1');
+    console.log(`Migrated ${localEntries.length} local entries to Firestore for uid ${uid}`);
+  } catch (err) {
+    console.error('Entry migration failed (will retry next login):', err);
+  }
+}
 
 // Fire-and-forget welcome email — non-blocking, errors silently logged
 const sendWelcomeEmail = async (email, name) => {
@@ -76,6 +109,12 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
         }
 
         setUser(u);
+
+        // Migrate any localStorage entries to Firestore on first real login
+        if (!u.isAnonymous) {
+            migrateLocalEntriesToFirestore(u.uid);
+        }
+
         try {
             const docRef = doc(db, 'artifacts', appId, 'users', u.uid, 'profile', 'main');
             const docSnap = await getDoc(docRef);

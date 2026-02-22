@@ -5,7 +5,8 @@ import { getRandomMessage } from '../utils/notificationMessages';
 
 /**
  * Client-side notification scheduler - workaround for Vercel free tier cron limitations.
- * Runs every 30 minutes when the app is open and sends push notifications via FCM.
+ * Fires once on mount and once every 30 minutes while the app is open.
+ * Uses a ref for entries so meal-logging doesn't re-trigger the scheduler.
  */
 export function useClientScheduler({ 
   user, 
@@ -20,10 +21,17 @@ export function useClientScheduler({
   entries,
   showToast 
 }) {
-  const lastCheckRef = useRef({ type: null, date: null });
+  // Track the last sent type+date in memory to prevent duplicates within a session
+  const lastSentRef = useRef({ type: null, date: null });
+  // Keep a stable ref to entries so the scheduler interval doesn't need entries as a dep
+  const entriesRef = useRef(entries);
+  const showToastRef = useRef(showToast);
+
+  useEffect(() => { entriesRef.current = entries; }, [entries]);
+  useEffect(() => { showToastRef.current = showToast; }, [showToast]);
 
   useEffect(() => {
-    if (!user || user.isAnonymous || !pushNotifications || !mealReminders) return;
+    if (!user || user.isAnonymous || !pushNotifications) return;
 
     const checkAndSendReminder = async () => {
       try {
@@ -48,8 +56,9 @@ export function useClientScheduler({
         const wakeMinutes = parseInt(wakeTime?.split(':')[0] || '7') * 60 + parseInt(wakeTime?.split(':')[1] || '0');
         const sleepMinutes = parseInt(sleepTime?.split(':')[0] || '23') * 60 + parseInt(sleepTime?.split(':')[1] || '0');
 
-        // Check today's entries
-        const todayEntries = entries.filter(e => {
+        // Read entries from ref so this function doesn't need entries in deps
+        const currentEntries = entriesRef.current || [];
+        const todayEntries = currentEntries.filter(e => {
           const entryDate = new Date(e.createdAt).toISOString().split('T')[0];
           return entryDate === todayStr;
         });
@@ -57,48 +66,60 @@ export function useClientScheduler({
         const hasBreakfast = todayEntries.some(e => e.type === 'Breakfast');
         const hasLunch = todayEntries.some(e => e.type === 'Lunch');
         const hasDinner = todayEntries.some(e => e.type === 'Dinner');
+        const hasAnyMealToday = todayEntries.length > 0;
 
         let notificationType = null;
         let title = null;
+        let extraContext = {};
+
+        const alreadySentToday = (type) =>
+          lastSentRef.current.type === type && lastSentRef.current.date === todayStr;
+
+        const isInWindow = (targetMinutes) => {
+          const diff = currentMinutes - targetMinutes;
+          return diff >= 0 && diff < 30;
+        };
 
         // Good morning message
-        if (goodmorningMessages && currentMinutes >= wakeMinutes && currentMinutes < wakeMinutes + 30) {
-          if (lastCheckRef.current.type !== 'goodmorning') {
+        if (goodmorningMessages && isInWindow(wakeMinutes)) {
+          if (!alreadySentToday('goodmorning')) {
             notificationType = 'goodmorning';
             title = 'Good Morning! ☀️';
           }
         }
         // Breakfast reminder
-        else if (currentMinutes >= breakfastMinutes && currentMinutes < breakfastMinutes + 30 && !hasBreakfast) {
-          if (lastCheckRef.current.type !== 'breakfast') {
+        else if (mealReminders && isInWindow(breakfastMinutes) && !hasBreakfast) {
+          if (!alreadySentToday('breakfast')) {
             notificationType = 'breakfast';
             title = 'Breakfast Time! 🍳';
           }
         }
-        // Lunch reminder (skip if breakfast was ignored)
-        else if (currentMinutes >= lunchMinutes && currentMinutes < lunchMinutes + 30 && !hasLunch) {
-          if (lastCheckRef.current.type !== 'lunch' && (hasBreakfast || lastCheckRef.current.type !== 'breakfast')) {
+        // Lunch reminder — only send if no lunch logged; message copy aware of whether any meal exists
+        else if (mealReminders && isInWindow(lunchMinutes) && !hasLunch) {
+          if (!alreadySentToday('lunch')) {
             notificationType = 'lunch';
             title = 'Lunch Break! 🥗';
+            extraContext = { hasAnyMealToday };
           }
         }
         // Dinner reminder
-        else if (currentMinutes >= dinnerMinutes && currentMinutes < dinnerMinutes + 30 && !hasDinner) {
-          if (lastCheckRef.current.type !== 'dinner') {
+        else if (mealReminders && isInWindow(dinnerMinutes) && !hasDinner) {
+          if (!alreadySentToday('dinner')) {
             notificationType = 'dinner';
             title = 'Dinner Time! 🍽️';
+            extraContext = { hasAnyMealToday };
           }
         }
         // Goodnight message
-        else if (goodnightMessages && currentMinutes >= sleepMinutes - 30 && currentMinutes < sleepMinutes) {
-          if (lastCheckRef.current.type !== 'goodnight') {
+        else if (goodnightMessages && isInWindow(sleepMinutes - 30)) {
+          if (!alreadySentToday('goodnight')) {
             notificationType = 'goodnight';
             title = 'Goodnight! 🌙';
           }
         }
 
         if (notificationType) {
-          const message = getRandomMessage(notificationType);
+          const message = getRandomMessage(notificationType, extraContext);
           
           // Send browser notification
           if ('Notification' in window && Notification.permission === 'granted') {
@@ -119,10 +140,11 @@ export function useClientScheduler({
             }
           }, { merge: true });
 
-          lastCheckRef.current = { type: notificationType, date: todayStr };
+          lastSentRef.current = { type: notificationType, date: todayStr };
 
-          if (showToast) {
-            showToast(message, 'info');
+          const toast = showToastRef.current;
+          if (toast) {
+            toast(message, 'info');
           }
         }
       } catch (error) {
@@ -130,12 +152,10 @@ export function useClientScheduler({
       }
     };
 
-    // Check immediately
+    // Run once on mount, then every 30 minutes
     checkAndSendReminder();
-
-    // Then check every 30 minutes
     const interval = setInterval(checkAndSendReminder, 30 * 60 * 1000);
-
     return () => clearInterval(interval);
-  }, [user, pushNotifications, mealReminders, goodnightMessages, goodmorningMessages, reminderTimes, wakeTime, sleepTime, timezone, entries, showToast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, pushNotifications, mealReminders, goodnightMessages, goodmorningMessages, reminderTimes, wakeTime, sleepTime, timezone]);
 }
