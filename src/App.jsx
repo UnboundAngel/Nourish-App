@@ -1,8 +1,11 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Activity } from 'lucide-react';
+import { calculateMacrosForGoal, isValidWeight } from './utils/calorieCalculator';
+import { db, appId } from './config/firebase';
+import { doc, setDoc, arrayUnion } from 'firebase/firestore';
 import { THEMES, GlobalStyles } from './components/ThemeStyles';
 const CustomCalendar = lazy(() => import('./components/Calendar').then(m => ({ default: m.CustomCalendar })));
-import { Modal, WelcomeScreen, StreakCelebration } from './components/Modals';
+import { Modal, WelcomeScreen, StreakCelebration, WeightUpdateModal } from './components/Modals';
 import { MealForm } from './components/MealForm';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -59,6 +62,12 @@ export default function NourishApp() {
     timezone, setTimezone,
     weight, setWeight,
     weightUnit, setWeightUnit,
+    goalType, setGoalType,
+    targetWeight, setTargetWeight,
+    startWeight, setStartWeight,
+    startDate, setStartDate,
+    weeklyGoal, setWeeklyGoal,
+    weightHistory, setWeightHistory,
     dailyTargets, setDailyTargets,
     editedTargets, setEditedTargets,
     userName, setUserName,
@@ -76,6 +85,7 @@ export default function NourishApp() {
   const [isStreakOpen, setIsStreakOpen] = useState(false);
   const [isTrendsOpen, setIsTrendsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
+  const [isWeightUpdateOpen, setIsWeightUpdateOpen] = useState(false);
 
   // --- Hydration (must be before useAuth since useAuth references it) ---
   const [tempUser, setTempUser] = useState(null);
@@ -100,6 +110,7 @@ export default function NourishApp() {
     setPushNotifications, setGoodnightMessages, setGoodmorningMessages,
     setReminderTimes, setWakeTime, setSleepTime, setTimezone,
     setWeight, setWeightUnit, setMealReminders, setHydrationReminders,
+    setGoalType, setTargetWeight, setStartWeight, setStartDate, setWeeklyGoal, setWeightHistory,
   });
 
   // Update hydration user reference when auth user changes
@@ -175,8 +186,26 @@ export default function NourishApp() {
   const handleSaveTargets = (newTargets) => rawHandleSaveTargets(newTargets, user);
 
   // --- Wrapped Auth Handlers ---
-  const handleSaveProfile = async (name, newEmail, weight, weightUnit, wakeTime, sleepTime, explicitUid) => {
-    await handleSaveProfileFull(name, newEmail, explicitUid, { dailyTargets, waterOz, dailyStreak, weight, weightUnit, wakeTime, sleepTime });
+  const handleSaveProfile = async (name, newEmail, weight, weightUnit, wakeTime, sleepTime, incomingGoalType, incomingTargetWeight, incomingWeeklyGoal, explicitUid) => {
+    // Persist weight goal fields to app state
+    if (incomingGoalType) { setGoalType(incomingGoalType); setStartWeight(weight ? Number(weight) : null); setStartDate(Date.now()); }
+    if (incomingTargetWeight) setTargetWeight(incomingTargetWeight);
+    if (incomingWeeklyGoal) setWeeklyGoal(incomingWeeklyGoal);
+    // Auto-calculate targets from weight + goal before saving
+    let finalTargets = dailyTargets;
+    if (weight && Number(weight) > 0 && incomingGoalType && isValidWeight(weight)) {
+      const calc = calculateMacrosForGoal(weight, weightUnit, incomingGoalType, incomingWeeklyGoal || 1);
+      if (calc) { finalTargets = calc; setDailyTargets(calc); setEditedTargets(calc); }
+    }
+    await handleSaveProfileFull(name, newEmail, explicitUid, {
+      dailyTargets: finalTargets, waterOz, dailyStreak, weight, weightUnit, wakeTime, sleepTime,
+      goalType: incomingGoalType || null,
+      targetWeight: incomingTargetWeight ? Number(incomingTargetWeight) : null,
+      startWeight: weight ? Number(weight) : null,
+      startDate: incomingGoalType ? Date.now() : null,
+      weeklyGoal: incomingWeeklyGoal || 1,
+      weightHistory: weight && Number(weight) > 0 ? [{ date: Date.now(), weight: Number(weight), note: 'Starting weight' }] : [],
+    });
   };
 
   const handleAuth = async (e, customEmail, customPassword, customMode, onboardingName, isQuiet) => {
@@ -297,6 +326,13 @@ export default function NourishApp() {
           getEntriesForDate={getEntriesForDate}
           setIsStreakOpen={setIsStreakOpen}
           insights={insights}
+          weight={weight}
+          targetWeight={targetWeight}
+          startWeight={startWeight}
+          goalType={goalType}
+          weeklyGoal={weeklyGoal}
+          weightUnit={weightUnit}
+          onUpdateWeight={() => setIsWeightUpdateOpen(true)}
         />
       </main>
 
@@ -401,6 +437,23 @@ export default function NourishApp() {
         setWeight={setWeight}
         weightUnit={weightUnit}
         setWeightUnit={setWeightUnit}
+        goalType={goalType}
+        setGoalType={setGoalType}
+        targetWeight={targetWeight}
+        setTargetWeight={setTargetWeight}
+        weeklyGoal={weeklyGoal}
+        setWeeklyGoal={setWeeklyGoal}
+        onRecalculateGoals={() => {
+          if (isValidWeight(weight) && goalType) {
+            const calc = calculateMacrosForGoal(weight, weightUnit, goalType, weeklyGoal);
+            if (calc) {
+              setDailyTargets(calc);
+              setEditedTargets(calc);
+              rawHandleSaveTargets(calc, user);
+              showToast('Daily goals recalculated!', 'success');
+            }
+          }
+        }}
         fcmToken={fcmToken}
         permissionStatus={permissionStatus}
         requestPushPermission={requestPermission}
@@ -422,6 +475,46 @@ export default function NourishApp() {
           foodMemory={foodMemory}
         />
       </div>
+
+      {/* Weight Update Modal */}
+      <WeightUpdateModal
+        isOpen={isWeightUpdateOpen}
+        onClose={() => setIsWeightUpdateOpen(false)}
+        currentWeight={weight}
+        weightUnit={weightUnit}
+        theme={theme}
+        onSave={async (newWeight, note) => {
+          const prevWeight = weight;
+          setWeight(newWeight);
+          const histEntry = { date: Date.now(), weight: newWeight, note };
+          setWeightHistory(h => [...(h || []), histEntry]);
+          // Persist weight + history to Firestore
+          if (user && !user.isAnonymous) {
+            setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), {
+              weight: newWeight,
+              weightHistory: arrayUnion(histEntry),
+            }, { merge: true });
+          }
+          // If weight changed and user has a goal, prompt to recalculate
+          const weightChanged = prevWeight && Number(newWeight) !== Number(prevWeight);
+          if (weightChanged && goalType) {
+            if (isValidWeight(newWeight)) {
+              const shouldRecalc = window.confirm(
+                `We detected a weight change (${prevWeight} → ${newWeight} ${weightUnit}). Would you like us to create new goals for you?`
+              );
+              if (shouldRecalc) {
+                const calc = calculateMacrosForGoal(newWeight, weightUnit, goalType, weeklyGoal);
+                if (calc) {
+                  setDailyTargets(calc);
+                  setEditedTargets(calc);
+                  rawHandleSaveTargets(calc, user);
+                  showToast('Goals updated based on new weight!', 'success');
+                }
+              }
+            }
+          }
+        }}
+      />
 
       {/* History Modal */}
       <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title={`History: ${viewDate.toLocaleDateString()}`} theme={theme}>

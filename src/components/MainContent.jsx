@@ -3,7 +3,7 @@ import {
   Leaf, Moon, Trash2, Circle, CheckCircle, 
   Activity, Droplet, Search, X 
 } from 'lucide-react';
-import { WaterBottle, WellnessTrends, DailyTargets, TriggerFinder } from './Widgets';
+import { WaterBottle, WellnessTrends, DailyTargets, TriggerFinder, WeightGoalProgress } from './Widgets';
 import { SortDropdown } from './SortDropdown';
 import { formatTime } from '../utils/helpers';
 import { MobileStreakCard } from './NourishGarden';
@@ -35,6 +35,8 @@ export function MainContent({
   use24HourTime,
   dailyStreak, getEntriesForDate, setIsStreakOpen,
   insights,
+  weight, targetWeight, startWeight, goalType, weeklyGoal, weightUnit,
+  onUpdateWeight,
 }) {
   return (
     <div className="max-w-[1200px] mx-auto px-3 py-4 md:p-8 space-y-5 md:space-y-8 pb-24 md:pb-32">
@@ -119,6 +121,18 @@ export function MainContent({
                 onEdit={() => setIsTargetsModalOpen(true)}
             />
             <WellnessTrends entries={todaysEntries} theme={theme} />
+            {goalType && (
+              <WeightGoalProgress
+                currentWeight={weight}
+                targetWeight={targetWeight}
+                startWeight={startWeight}
+                goalType={goalType}
+                weeklyGoal={weeklyGoal}
+                weightUnit={weightUnit}
+                theme={theme}
+                onUpdateWeight={onUpdateWeight}
+              />
+            )}
             {(insights.topTrigger || insights.activeExperiment) && (
               <div className="lg:col-span-2">
                 <TriggerFinder 

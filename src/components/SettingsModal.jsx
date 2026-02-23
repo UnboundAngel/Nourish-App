@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { LogIn, LogOut, Eye, EyeOff, Clock, Palette, Bell, Smartphone, Globe, Moon, Sun } from 'lucide-react';
+import { LogIn, LogOut, Eye, EyeOff, Clock, Palette, Bell, Smartphone, Globe, Moon, Sun, Scale } from 'lucide-react';
+import { calculateMacrosForGoal, isValidWeight } from '../utils/calorieCalculator';
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
 import { THEMES } from './ThemeStyles';
@@ -36,6 +37,10 @@ export function SettingsModal({
   timezone, setTimezone,
   weight, setWeight,
   weightUnit, setWeightUnit,
+  goalType, setGoalType,
+  targetWeight, setTargetWeight,
+  weeklyGoal, setWeeklyGoal,
+  onRecalculateGoals,
   fcmToken, permissionStatus, requestPushPermission,
   showToast,
   handleSaveNotificationSettings,
@@ -251,6 +256,88 @@ export function SettingsModal({
                             className={`w-full py-2.5 rounded-xl ${theme.primary} text-white font-bold text-sm hover:brightness-90 active:scale-95 transition-all`}
                         >
                             Save Notification Settings
+                        </button>
+                    )}
+                </div>
+            </Widget>
+
+            {/* Weight Goal Settings */}
+            <Widget title="Weight Goal" icon={Scale} theme={theme} className="p-0">
+                <div className="p-4 space-y-4">
+                    {/* Current Weight */}
+                    <div>
+                        <label className={`text-[10px] font-bold uppercase opacity-40 block mb-1 ${theme.textMain}`}>Current Weight</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="number"
+                                value={weight || ''}
+                                onChange={e => setWeight && setWeight(e.target.value ? Number(e.target.value) : null)}
+                                placeholder="150"
+                                className={`flex-1 p-3 rounded-xl text-sm font-bold ${theme.inputBg} ${theme.textMain} outline-none`}
+                            />
+                            <div className={`flex gap-1 ${theme.inputBg} p-1 rounded-xl`}>
+                                <button onClick={() => setWeightUnit && setWeightUnit('lbs')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${weightUnit === 'lbs' ? `${theme.primary} text-white` : 'opacity-40'}`}>lbs</button>
+                                <button onClick={() => setWeightUnit && setWeightUnit('kg')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${weightUnit === 'kg' ? `${theme.primary} text-white` : 'opacity-40'}`}>kg</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Goal Type */}
+                    <div>
+                        <label className={`text-[10px] font-bold uppercase opacity-40 block mb-1 ${theme.textMain}`}>Goal</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {[{ id: 'lose', label: 'Lose' }, { id: 'maintain', label: 'Maintain' }, { id: 'gain', label: 'Gain' }].map(opt => (
+                                <button
+                                    key={opt.id}
+                                    onClick={() => setGoalType && setGoalType(opt.id)}
+                                    className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                                        goalType === opt.id ? `${theme.primary} text-white` : `${theme.inputBg} ${theme.textMain} opacity-60 hover:opacity-100`
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Target Weight */}
+                    {(goalType === 'lose' || goalType === 'gain') && (
+                        <div>
+                            <label className={`text-[10px] font-bold uppercase opacity-40 block mb-1 ${theme.textMain}`}>Target Weight ({weightUnit})</label>
+                            <input
+                                type="number"
+                                value={targetWeight || ''}
+                                onChange={e => setTargetWeight && setTargetWeight(e.target.value ? Number(e.target.value) : null)}
+                                placeholder={weightUnit === 'lbs' ? '140' : '64'}
+                                className={`w-full p-3 rounded-xl text-sm font-bold ${theme.inputBg} ${theme.textMain} outline-none`}
+                            />
+                        </div>
+                    )}
+
+                    {/* Weekly Goal */}
+                    {(goalType === 'lose' || goalType === 'gain') && (
+                        <div>
+                            <label className={`text-[10px] font-bold uppercase opacity-40 block mb-1 ${theme.textMain}`}>Weekly Goal: {weeklyGoal || 1} {weightUnit}/week</label>
+                            <input
+                                type="range"
+                                min="0.5" max="2" step="0.5"
+                                value={weeklyGoal || 1}
+                                onChange={e => setWeeklyGoal && setWeeklyGoal(Number(e.target.value))}
+                                className="w-full"
+                            />
+                            <div className="flex justify-between text-[10px] opacity-40 font-bold">
+                                <span>0.5</span><span>1</span><span>1.5</span><span>2</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Recalculate */}
+                    {isValidWeight(weight) && goalType && (
+                        <button
+                            onClick={onRecalculateGoals}
+                            className={`w-full py-2.5 rounded-xl ${theme.primary} text-white font-bold text-sm hover:brightness-90 active:scale-95 transition-all`}
+                        >
+                            Recalculate Daily Goals
                         </button>
                     )}
                 </div>

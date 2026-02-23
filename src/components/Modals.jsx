@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { calculateMacrosForGoal, estimateTimeToGoal, isValidWeight } from '../utils/calorieCalculator';
 import { X, Leaf, ChevronLeft, ChevronUp, ChevronDown, Flame, ShieldCheck, Mail, ArrowRight, Cloud, Smartphone, Palette, Target, Check, Eye, EyeOff, Apple, Coffee, Droplet, LogIn, UserPlus } from 'lucide-react';
 
 // Reusable Modal Component
@@ -90,6 +91,11 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
     const [weightUnit, setWeightUnit] = useState('lbs');
     const [wakeTime, setWakeTime] = useState('07:00');
     const [sleepTime, setSleepTime] = useState('23:00');
+
+    // Weight goal state
+    const [goalType, setGoalType] = useState(null); // 'lose' | 'gain' | 'maintain' | null
+    const [targetWeight, setTargetWeight] = useState('');
+    const [weeklyGoal, setWeeklyGoal] = useState(1);
     
     const [showIdleHint, setShowIdleHint] = useState(false);
     const [isIntroExiting, setIsIntroExiting] = useState(false);
@@ -143,7 +149,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
         setTimeout(() => setStep(1), 800);
     };
 
-    const handleNext = () => setStep(prev => prev + 1);
+    const handleNext = (toStep) => toStep !== undefined ? setStep(toStep) : setStep(prev => prev + 1);
     const handleBack = () => setStep(prev => prev - 1);
 
     const handleSkipSync = () => {
@@ -161,15 +167,31 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
         const trimmedAuth = name.trim() || 'Friend';
         const capitalizedName = trimmedAuth.charAt(0).toUpperCase() + trimmedAuth.slice(1).toLowerCase();
         const success = await onAuth(e, email, password, authMode, capitalizedName, true);
-        if (success) setStep(4);
+        if (success) setStep(5);
     };
 
     const handleGoogleSignUp = async () => {
         const trimmedGoogle = name.trim() || 'Friend';
         const capitalizedName = trimmedGoogle.charAt(0).toUpperCase() + trimmedGoogle.slice(1).toLowerCase();
         const success = await onGoogle(capitalizedName, true);
-        if (success) setStep(4);
+        if (success) setStep(5);
     };
+
+    // Auto-calculate targets when arriving at step 6 (Daily Goals)
+    const autoCalcTargets = () => {
+        if (isValidWeight(weight) && goalType) {
+            const calculated = calculateMacrosForGoal(weight, weightUnit, goalType, weeklyGoal);
+            if (calculated) onTargetsChange(calculated);
+        }
+    };
+
+    // Timeline estimate for weight goal step
+    const timeline = useMemo(() => {
+        if (isValidWeight(weight) && isValidWeight(targetWeight) && (goalType === 'lose' || goalType === 'gain')) {
+            return estimateTimeToGoal(weight, targetWeight, weeklyGoal);
+        }
+        return null;
+    }, [weight, targetWeight, weeklyGoal, goalType]);
 
     return (
         <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center p-3 sm:p-4 md:p-8 ${theme.bg} overflow-hidden transition-colors duration-1000`}>
@@ -280,7 +302,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                 <div className={`relative w-full max-w-2xl ${theme.card} rounded-[2rem] sm:rounded-[2.5rem] md:rounded-[3rem] shadow-2xl p-5 sm:p-8 md:p-12 ${theme.textMain} theme-transition overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-700`}>
                     
                     <div className="absolute top-0 left-0 right-0 h-1.5 flex gap-1 px-1 pt-1">
-                        {[1, 2, 3, 4, 5].map(i => (
+                        {[1, 2, 3, 4, 5, 6].map(i => (
                             <div key={i} className={`flex-1 h-full rounded-full transition-all duration-500 ${step >= i ? theme.primary : 'bg-black/5'}`}></div>
                         ))}
                     </div>
@@ -294,7 +316,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                                 <button onClick={handleNext} disabled={!name.trim()} className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2`} > Continue <ArrowRight size={20} /> </button>
                                 
                                 <button 
-                                    onClick={() => { setAuthMode('login'); setStep(3); }}
+                                    onClick={() => { setAuthMode('login'); setStep(4); }}
                                     className="text-sm font-bold opacity-40 hover:opacity-100 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 mx-auto"
                                 >
                                     Already have an account? Sign In
@@ -362,7 +384,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                                 </div>
 
                                 <button 
-                                    onClick={handleNext} 
+                                    onClick={() => isValidWeight(weight) ? handleNext() : handleNext(4)}
                                     className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}
                                 >
                                     Continue <ArrowRight size={20} />
@@ -375,11 +397,97 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                         </div>
                     )}
 
-                    {step === 3 && (
+                    {step === 3 && isValidWeight(weight) && (
+                        <div className="text-center animate-in slide-in-from-right-8 duration-500">
+                            <h2 className={`text-2xl sm:text-3xl font-black ${theme.primaryText} mb-2 sm:mb-4 tracking-tight`}>Weight Goal</h2>
+                            <p className="text-sm sm:text-base opacity-60 mb-5 sm:mb-8 max-w-sm mx-auto">Do you have a weight goal? We'll set your daily calorie targets automatically.</p>
+
+                            <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto mb-6">
+                                {[
+                                    { id: 'lose', label: 'Lose Weight', emoji: '📉' },
+                                    { id: 'maintain', label: 'Maintain', emoji: '⚖️' },
+                                    { id: 'gain', label: 'Gain Weight', emoji: '📈' },
+                                ].map(opt => (
+                                    <button
+                                        key={opt.id}
+                                        type="button"
+                                        onClick={() => setGoalType(opt.id)}
+                                        className={`p-4 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${
+                                            goalType === opt.id
+                                                ? `${theme.primary} text-white border-transparent scale-105 shadow-xl`
+                                                : `${theme.inputBg} border-transparent opacity-60 hover:opacity-100`
+                                        }`}
+                                    >
+                                        <span className="text-2xl">{opt.emoji}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-wider">{opt.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {(goalType === 'lose' || goalType === 'gain') && (
+                                <div className="space-y-4 max-w-sm mx-auto mb-6">
+                                    <div className="text-left">
+                                        <label className="text-xs font-bold uppercase opacity-40 mb-2 block">Target Weight ({weightUnit})</label>
+                                        <input
+                                            type="number"
+                                            placeholder={weightUnit === 'lbs' ? '140' : '64'}
+                                            className={`w-full p-4 ${theme.inputBg} rounded-2xl font-bold outline-none border-2 border-transparent focus:border-current transition-all text-center text-xl`}
+                                            value={targetWeight}
+                                            onChange={e => setTargetWeight(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="text-left">
+                                        <label className="text-xs font-bold uppercase opacity-40 mb-2 block">Weekly Goal: {weeklyGoal} {weightUnit}/week</label>
+                                        <input
+                                            type="range"
+                                            min="0.5"
+                                            max="2"
+                                            step="0.5"
+                                            value={weeklyGoal}
+                                            onChange={e => setWeeklyGoal(Number(e.target.value))}
+                                            className="w-full accent-current"
+                                        />
+                                        <div className="flex justify-between text-[10px] opacity-40 font-bold mt-1">
+                                            <span>0.5</span><span>1</span><span>1.5</span><span>2</span>
+                                        </div>
+                                    </div>
+                                    {timeline && (
+                                        <div className={`p-3 rounded-xl ${theme.inputBg} text-center`}>
+                                            <p className="text-xs opacity-60">Estimated timeline</p>
+                                            <p className={`font-black text-lg ${theme.primaryText}`}>~{timeline.months} month{timeline.months !== 1 ? 's' : ''}</p>
+                                            <p className="text-xs opacity-40">{timeline.estimatedDate.toLocaleDateString()}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="max-w-sm mx-auto space-y-3">
+                                <button
+                                    onClick={() => handleNext()}
+                                    disabled={!goalType}
+                                    className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50`}
+                                >
+                                    Continue <ArrowRight size={20} />
+                                </button>
+                                <button
+                                    onClick={() => { setGoalType('maintain'); setTargetWeight(''); handleNext(); }}
+                                    className="text-sm font-bold opacity-40 hover:opacity-100 transition-all mx-auto block"
+                                >
+                                    Skip — No Goal
+                                </button>
+                            </div>
+
+                            <button onClick={handleBack} className="mt-6 text-sm font-bold opacity-40 hover:opacity-100 flex items-center gap-1 mx-auto">
+                                <ChevronLeft size={16} /> Back
+                            </button>
+                        </div>
+                    )}
+
+                    {step === 4 && (
                         <div className="text-center animate-in slide-in-from-right-8 duration-500">
                             <h2 className={`text-2xl sm:text-3xl font-black ${theme.textMain} mb-2 sm:mb-4 tracking-tight`}>Cloud or Local?</h2>
                             <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8 max-w-sm mx-auto text-balance">Choose how you'd like to save your nutrition data.</p>
-                            
+
                             {!isEmailForm ? (
                                 <div className="space-y-4 max-w-md mx-auto">
                                     <button onClick={handleGoogleSignUp} className={`w-full py-3 sm:py-4 ${theme.card} border-2 ${theme.border} rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-3 hover:brightness-95 hover:scale-105 active:scale-95 transition-all shadow-sm ${theme.textMain}`}>
@@ -431,7 +539,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                         </div>
                     )}
 
-                    {step === 4 && (
+                    {step === 5 && (
                         <div className="text-center animate-in slide-in-from-right-8 duration-500">
                             <h2 className={`text-2xl sm:text-3xl font-black ${theme.textMain} mb-2 sm:mb-4 tracking-tight`}>Pick your vibe</h2>
                             <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8">Select a theme that matches your style.</p>
@@ -448,7 +556,7 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                         </div>
                     )}
 
-                    {step === 5 && (
+                    {step === 6 && (
                         <div className="text-center animate-in slide-in-from-right-8 duration-500">
                             <h2 className={`text-2xl sm:text-3xl font-black ${theme.textMain} mb-2 sm:mb-4 tracking-tight`}>Daily Goals</h2>
                             <p className="text-sm sm:text-base md:text-lg opacity-60 mb-5 sm:mb-8">Set your baseline nutritional targets.</p>
@@ -458,12 +566,70 @@ export const WelcomeScreen = ({ onSave, theme, onAuth, onGoogle, onForgotPasswor
                                 <div className={`p-3 sm:p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[9px] sm:text-[10px] font-bold uppercase opacity-40 block mb-1">Carbs (g)</label> <input type="number" className="bg-transparent w-full text-xl sm:text-2xl font-black outline-none text-orange-600" value={dailyTargets.carbs} onChange={e => onTargetsChange({...dailyTargets, carbs: Number(e.target.value)})} /> </div>
                                 <div className={`p-3 sm:p-4 rounded-2xl ${theme.inputBg} text-left`}> <label className="text-[9px] sm:text-[10px] font-bold uppercase opacity-40 block mb-1">Fats (g)</label> <input type="number" className="bg-transparent w-full text-xl sm:text-2xl font-black outline-none text-blue-600" value={dailyTargets.fats} onChange={e => onTargetsChange({...dailyTargets, fats: Number(e.target.value)})} /> </div>
                             </div>
-                            <button onClick={() => onSave(name, email, weight, weightUnit, wakeTime, sleepTime)} className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}> Start My Journey <ArrowRight size={20} /> </button>
+                            {isValidWeight(weight) && goalType && (
+                                <p className={`text-xs opacity-50 text-center mb-3`}>✨ Calculated from your {weight} {weightUnit} bodyweight{goalType !== 'maintain' ? ` · ${goalType === 'lose' ? 'losing' : 'gaining'} ${weeklyGoal} ${weightUnit}/week` : ''}</p>
+                            )}
+                            <button onClick={() => onSave(name, email, weight, weightUnit, wakeTime, sleepTime, goalType, targetWeight, weeklyGoal)} className={`w-full py-4 sm:py-5 rounded-2xl ${theme.primary} text-white font-bold text-lg sm:text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2`}> Start My Journey <ArrowRight size={20} /> </button>
                         </div>
                     )}
                 </div>
             )}
         </div>
+    );
+};
+
+// Weight Update Modal
+export const WeightUpdateModal = ({ isOpen, onClose, currentWeight, weightUnit, theme, onSave }) => {
+    const [newWeight, setNewWeight] = useState(currentWeight ? String(currentWeight) : '');
+    const [note, setNote] = useState('');
+
+    const parsedNew = Number(newWeight);
+    const parsedCurrent = Number(currentWeight);
+    const hasChanged = newWeight !== '' && !isNaN(parsedNew) && parsedNew > 0 && parsedNew !== parsedCurrent;
+    const diff = hasChanged ? (parsedNew - parsedCurrent).toFixed(1) : null;
+
+    const handleSave = () => {
+        if (!newWeight || isNaN(parsedNew) || parsedNew <= 0) return;
+        onSave(parsedNew, note.trim());
+        setNote('');
+        onClose();
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Update Weight" theme={theme}>
+            <div className="space-y-4">
+                <div className="flex gap-2 items-center">
+                    <input
+                        type="number"
+                        value={newWeight}
+                        onChange={e => setNewWeight(e.target.value)}
+                        className={`flex-1 p-4 ${theme.inputBg} rounded-2xl text-2xl font-black text-center outline-none border-2 border-transparent focus:border-current transition-all`}
+                        placeholder={currentWeight || '150'}
+                        autoFocus
+                    />
+                    <span className={`text-sm font-bold opacity-50 ${theme.textMain}`}>{weightUnit}</span>
+                </div>
+                {diff !== null && (
+                    <div className={`text-center text-sm font-bold ${parsedNew < parsedCurrent ? 'text-emerald-500' : 'text-orange-500'}`}>
+                        {parsedNew > parsedCurrent ? '+' : ''}{diff} {weightUnit}
+                    </div>
+                )}
+                <input
+                    type="text"
+                    placeholder="Note (optional)"
+                    value={note}
+                    onChange={e => setNote(e.target.value)}
+                    className={`w-full p-3 ${theme.inputBg} rounded-xl text-sm font-medium outline-none`}
+                />
+                <button
+                    onClick={handleSave}
+                    disabled={!newWeight || isNaN(parsedNew) || parsedNew <= 0}
+                    className={`w-full py-3 ${theme.primary} text-white font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all disabled:opacity-50`}
+                >
+                    Save Weight
+                </button>
+            </div>
+        </Modal>
     );
 };
 

@@ -60,7 +60,7 @@ const sendWelcomeEmail = async (email, name) => {
   }
 };
 
-export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setUserEmail, setDailySummary, setWeeklySummary, setDailyStreak, setWaterOz, setDailyTargets, setEditedTargets, setShowWelcome, setPushNotifications, setGoodnightMessages, setGoodmorningMessages, setReminderTimes, setWakeTime, setSleepTime, setTimezone, setWeight, setWeightUnit, setMealReminders, setHydrationReminders }) {
+export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setUserEmail, setDailySummary, setWeeklySummary, setDailyStreak, setWaterOz, setDailyTargets, setEditedTargets, setShowWelcome, setPushNotifications, setGoodnightMessages, setGoodmorningMessages, setReminderTimes, setWakeTime, setSleepTime, setTimezone, setWeight, setWeightUnit, setMealReminders, setHydrationReminders, setGoalType, setTargetWeight, setStartWeight, setStartDate, setWeeklyGoal, setWeightHistory }) {
   const [user, setUser] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -197,6 +197,12 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
             if (data.timezone) setTimezone(data.timezone);
             if (data.weight !== undefined) setWeight(data.weight);
             if (data.weightUnit) setWeightUnit(data.weightUnit);
+            if (data.goalType) setGoalType && setGoalType(data.goalType);
+            if (data.targetWeight !== undefined) setTargetWeight && setTargetWeight(data.targetWeight);
+            if (data.startWeight !== undefined) setStartWeight && setStartWeight(data.startWeight);
+            if (data.startDate !== undefined) setStartDate && setStartDate(data.startDate);
+            if (data.weeklyGoal !== undefined) setWeeklyGoal && setWeeklyGoal(data.weeklyGoal);
+            if (data.weightHistory) setWeightHistory && setWeightHistory(data.weightHistory);
             if (data.mealReminders !== undefined) setMealReminders(data.mealReminders);
             if (data.hydrationReminders !== undefined) setHydrationReminders(data.hydrationReminders);
             if (data.dailyTargets) {
@@ -224,7 +230,7 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSaveProfileFull = async (name, newEmail, explicitUid, { dailyTargets, waterOz, dailyStreak, weight, weightUnit, wakeTime, sleepTime }) => {
+  const handleSaveProfileFull = async (name, newEmail, explicitUid, { dailyTargets, waterOz, dailyStreak, weight, weightUnit, wakeTime, sleepTime, goalType, targetWeight, startWeight, startDate, weeklyGoal, weightHistory }) => {
       const targetUid = explicitUid || user?.uid;
       if (!targetUid) return;
 
@@ -248,7 +254,13 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
           weightUnit: weightUnit || 'lbs',
           wakeTime: wakeTime || '07:00',
           sleepTime: sleepTime || '23:00',
-          timezone: timezone
+          timezone: timezone,
+          ...(goalType ? { goalType } : {}),
+          ...(targetWeight ? { targetWeight: Number(targetWeight) } : {}),
+          ...(startWeight ? { startWeight: Number(startWeight) } : {}),
+          ...(startDate ? { startDate } : {}),
+          weeklyGoal: weeklyGoal || 1,
+          ...(weightHistory && weightHistory.length > 0 ? { weightHistory } : {}),
       }, { merge: true });
       setUserName(capitalizedName);
       localStorage.setItem('nourish-user-name', capitalizedName);

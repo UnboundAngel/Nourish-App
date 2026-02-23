@@ -50,6 +50,14 @@ export function useSettings() {
   const [weight, setWeight] = useState(null);
   const [weightUnit, setWeightUnit] = useState('lbs');
 
+  // Weight Goal State
+  const [goalType, setGoalType] = useState(null); // 'lose' | 'gain' | 'maintain' | null
+  const [targetWeight, setTargetWeight] = useState(null);
+  const [startWeight, setStartWeight] = useState(null);
+  const [startDate, setStartDate] = useState(null);
+  const [weeklyGoal, setWeeklyGoal] = useState(1);
+  const [weightHistory, setWeightHistory] = useState([]);
+
   // Daily Targets
   const [dailyTargets, setDailyTargets] = useState({
     calories: 2000,
@@ -242,6 +250,12 @@ export function useSettings() {
     timezone, setTimezone,
     weight, setWeight,
     weightUnit, setWeightUnit,
+    goalType, setGoalType,
+    targetWeight, setTargetWeight,
+    startWeight, setStartWeight,
+    startDate, setStartDate,
+    weeklyGoal, setWeeklyGoal,
+    weightHistory, setWeightHistory,
     dailyTargets, setDailyTargets,
     editedTargets, setEditedTargets,
     userName, setUserName,

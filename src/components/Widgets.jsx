@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, BarChart3, Target, Flame, TrendingDown } from 'lucide-react';
+import { Plus, BarChart3, Target, Flame, TrendingDown, Scale } from 'lucide-react';
+import { calculateProgress, estimateTimeToGoal, isValidWeight } from '../utils/calorieCalculator';
 import { FEELINGS, getFeeling } from '../utils/feelings';
 
 export const ProgressRing = ({ current, target, label, unit, color, theme, size }) => {
@@ -381,6 +382,80 @@ export const WellnessTrends = ({ entries, theme }) => {
             </div>
           );
         })}
+      </div>
+    </Widget>
+  );
+};
+
+export const WeightGoalProgress = ({ currentWeight, targetWeight, startWeight, goalType, weeklyGoal, weightUnit, theme, onUpdateWeight }) => {
+  const validCurrent = isValidWeight(currentWeight);
+  const validTarget = isValidWeight(targetWeight);
+  const validStart = isValidWeight(startWeight);
+
+  const progress = (validCurrent && validTarget && validStart)
+    ? calculateProgress(startWeight, currentWeight, targetWeight)
+    : 0;
+
+  const remaining = (validCurrent && validTarget)
+    ? Math.abs(Number(targetWeight) - Number(currentWeight)).toFixed(1)
+    : null;
+
+  const timeline = (validCurrent && validTarget && isValidWeight(weeklyGoal) && goalType !== 'maintain')
+    ? estimateTimeToGoal(currentWeight, targetWeight, weeklyGoal)
+    : null;
+
+  const goalLabel = goalType === 'lose' ? 'Lose Weight' : goalType === 'gain' ? 'Gain Weight' : 'Maintain';
+  const goalColor = goalType === 'lose' ? 'text-rose-500' : goalType === 'gain' ? 'text-emerald-500' : 'text-blue-500';
+  const barColor = goalType === 'lose' ? 'bg-rose-500' : goalType === 'gain' ? 'bg-emerald-500' : 'bg-blue-500';
+
+  return (
+    <Widget title="Weight Goal" icon={Scale} subtitle={goalLabel} theme={theme}>
+      <div className="space-y-4">
+        {/* Current → Target */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-center flex-1">
+            <div className={`text-2xl font-black ${theme.textMain}`}>{validCurrent ? Number(currentWeight).toFixed(1) : '—'}</div>
+            <div className="text-[10px] font-bold uppercase opacity-40">{weightUnit} now</div>
+          </div>
+          <div className="text-center opacity-30 text-xs font-bold">→</div>
+          <div className="text-center flex-1">
+            <div className={`text-2xl font-black ${validTarget ? goalColor : 'opacity-30'}`}>{validTarget ? Number(targetWeight).toFixed(1) : '—'}</div>
+            <div className="text-[10px] font-bold uppercase opacity-40">goal</div>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        {goalType !== 'maintain' && validTarget && (
+          <div>
+            <div className={`h-3 rounded-full overflow-hidden ${theme.inputBg}`}>
+              <div
+                className={`h-full ${barColor} rounded-full transition-all duration-1000`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[10px] font-bold opacity-40">{progress}% complete</span>
+              {remaining !== null && <span className={`text-[10px] font-bold ${goalColor}`}>{remaining} {weightUnit} to go</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Timeline */}
+        {timeline && (
+          <div className={`p-3 rounded-xl ${theme.inputBg} text-center`}>
+            <div className="text-[10px] font-bold uppercase opacity-40 mb-1">Estimated completion</div>
+            <div className={`font-black text-base ${theme.primaryText}`}>~{timeline.months} month{timeline.months !== 1 ? 's' : ''}</div>
+            <div className="text-[10px] opacity-40">{timeline.estimatedDate.toLocaleDateString()}</div>
+          </div>
+        )}
+
+        {/* Update Weight */}
+        <button
+          onClick={onUpdateWeight}
+          className={`w-full py-2.5 rounded-xl ${theme.primary} text-white font-bold text-sm hover:brightness-110 active:scale-95 transition-all`}
+        >
+          Update Weight
+        </button>
       </div>
     </Widget>
   );
