@@ -19,7 +19,16 @@
       {
         "source": "/index.html",
         "headers": [
-          { "key": "Cache-Control", "value": "no-cache" }
+          { "key": "Cache-Control", "value": "no-cache" },
+          { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
+          { "key": "Cross-Origin-Embedder-Policy", "value": "unsafe-none" }
+        ]
+      },
+      {
+        "source": "/**",
+        "headers": [
+          { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
+          { "key": "Cross-Origin-Embedder-Policy", "value": "unsafe-none" }
         ]
       }
     ],

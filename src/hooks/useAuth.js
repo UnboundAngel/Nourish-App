@@ -5,7 +5,8 @@ import {
   signInWithCustomToken,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   sendPasswordResetEmail
@@ -69,6 +70,43 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    // Handle redirect result from Google Sign In
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result) {
+          // User successfully signed in via redirect
+          const meta = result.user.metadata;
+          const onboardingName = sessionStorage.getItem('nourish-onboarding-name');
+          
+          if (meta && meta.creationTime === meta.lastSignInTime) {
+            sendWelcomeEmail(result.user.email, onboardingName || result.user.displayName || 'Friend');
+          }
+          
+          // Save profile if onboarding name was provided
+          if (onboardingName && result.user) {
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const capitalizedName = onboardingName.charAt(0).toUpperCase() + onboardingName.slice(1).toLowerCase();
+            const docRef = doc(db, 'artifacts', appId, 'users', result.user.uid, 'profile', 'main');
+            await setDoc(docRef, { 
+              displayName: capitalizedName, 
+              email: result.user.email,
+              timezone: timezone
+            }, { merge: true });
+            setUserName(capitalizedName);
+            localStorage.setItem('nourish-user-name', capitalizedName);
+            setUserEmail(result.user.email);
+            setShowWelcome(false);
+            sessionStorage.removeItem('nourish-onboarding-name');
+          }
+        }
+      })
+      .catch((error) => {
+        console.error('Redirect result error:', error.code, error.message);
+        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+          alert('Google Sign In failed: ' + error.message);
+        }
+      });
+
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
         if (!u) {
             // Check if user previously chose "Device Only" mode
@@ -249,28 +287,17 @@ export function useAuth({ setUserName, setCurrentThemeId, setUse24HourTime, setU
   const handleGoogleLogin = async (onboardingName, isQuiet, { handleSaveProfile: saveProfile }) => {
       try {
           const provider = new GoogleAuthProvider();
-          const userCredential = await signInWithPopup(auth, provider);
-          
-          // Send welcome email if this is a new Google user (creationTime === lastSignInTime)
-          const meta = userCredential.user.metadata;
-          if (meta && meta.creationTime === meta.lastSignInTime) {
-              sendWelcomeEmail(userCredential.user.email, onboardingName);
+          // Store onboarding name in sessionStorage to retrieve after redirect
+          if (onboardingName) {
+              sessionStorage.setItem('nourish-onboarding-name', onboardingName);
           }
-
-          if (onboardingName && userCredential.user) {
-              await saveProfile(onboardingName, userCredential.user.email, userCredential.user.uid);
-          }
-
+          // Use redirect instead of popup to avoid COOP issues
+          await signInWithRedirect(auth, provider);
+          // Note: The actual sign-in completion is handled by getRedirectResult in useEffect
           return true;
       } catch (error) {
           console.error('Google Sign In error:', error.code, error.message);
-          if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-              alert('The sign-in popup was blocked or closed. Please allow popups for this site and try again.');
-          } else if (error.code === 'auth/cancelled-popup-request') {
-              // User clicked multiple times, ignore
-          } else {
-              alert('Google Sign In failed: ' + error.message);
-          }
+          alert('Google Sign In failed: ' + error.message);
           return false;
       }
   };
