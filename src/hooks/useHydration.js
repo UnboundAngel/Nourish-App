@@ -30,6 +30,22 @@ export function useHydration({ user }) {
     }
   }, [waterOz]);
 
+  // Reset at midnight — poll every 60s, reset if stored date is no longer today
+  useEffect(() => {
+    const check = () => {
+      const storedDate = localStorage.getItem('nourish-water-date');
+      const today = getTodayDateString();
+      if (storedDate && storedDate !== today) {
+        localStorage.setItem('nourish-water-date', today);
+        localStorage.setItem('nourish-water-oz', '0');
+        setWaterOz(0);
+        prevWaterOzRef.current = 0;
+      }
+    };
+    const interval = setInterval(check, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleAddWater = async (amount) => {
       // If the stored date is not today, reset before adding
       const storedDate = localStorage.getItem('nourish-water-date');
